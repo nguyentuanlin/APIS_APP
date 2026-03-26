@@ -60,6 +60,26 @@ export interface GradeApiResponse {
   };
 }
 
+// Interface cho học phần chưa hoàn thành (học lại)
+export interface HocPhanChuaHoanThanh {
+  ID: string;
+  DAOTAO_HOCPHAN_ID: string;
+  DAOTAO_HOCPHAN_MA: string;
+  DAOTAO_HOCPHAN_TEN: string;
+  DAOTAO_HOCPHAN_HOCTRINH: number;
+  NAMHOC: string;
+  HOCKY: number;
+  LANHOC: number;
+  LANTHI: number;
+  DIEM: number;
+  DIEMQUYDOI: number;
+  DIEMQUYDOI_TEN: string;
+  DANHGIA_MA: string;
+  DANHGIA_TEN: string;
+  GHICHU: string | null;
+  DIEM_DANHSACHHOC_TEN: string;
+}
+
 // Interface cho UI
 export interface GradeItem {
   STT: number;
@@ -79,8 +99,12 @@ export interface SemesterGrade {
   NAMHOC: string;
   HOCKY: number;
   DANHSACHDIEM: GradeItem[];
+  TONGSO_TINCHI: number;
+  SOTINCHI_TICHLUY: number;
   DIEMTRUNGBINH_HE10: number;
   DIEMTRUNGBINH_HE4: number;
+  DIEMTRUNGBINH_TICHLUY_HE10: number;
+  DIEMTRUNGBINH_TICHLUY_HE4: number;
 }
 
 export interface GradeStatistics {
@@ -95,6 +119,7 @@ export interface GradeStatistics {
 export interface GradeResponse {
   DANHSACH_HOCKY: SemesterGrade[];
   THONGKE: GradeStatistics;
+  HOCPHAN_CHUAHOANTHANH: HocPhanChuaHoanThanh[];
 }
 
 // Interface cho Khối kiến thức
@@ -118,14 +143,80 @@ export interface KhoiKienThucItem {
 export interface KhoiTongHop {
   MAKHOI: string;
   TENKHOI: string;
-  TONGSOTINCHI: number;
-  TONGSOTINCHI_BATBUOC: number;
-  TONGSOTINCHI_DATICHLUY: number;
+  TONGSOTINCHICUAKHOI: number;
+  SOBATBUOC: number;
+  SODATICHLUY: number | null;
+  SOTINCHINO: number;
 }
 
 export interface KhoiKienThucResponse {
   rsChiTiet: KhoiKienThucItem[];
   rsTongHop: KhoiTongHop[];
+}
+
+export interface QuyetDinh {
+  LOAIQUYETDINH_ID: string;
+  LOAIQUYETDINH_TEN: string;
+  SOQUYETDINH: string;
+  NGAYQUYETDINH: string;
+  NGAYHIEULUC: string;
+  NOIDUNG: string;
+}
+
+export interface VanBangChungChi {
+  ID: string;
+  PHANLOAI_ID: string;
+  PHANLOAI_TEN: string;
+  CHUONGTRINH_TEN: string;
+  XEPLOAI_ID: string;
+  XEPLOAI_TEN: string;
+  SOHIEUBANG: string;
+  SOVAOSOCAPBANG: string;
+  QLSV_NGUOIHOC_ID: string;
+  QLSV_NGUOIHOC_MASO: string;
+  QLSV_NGUOIHOC_HODEM: string;
+  QLSV_NGUOIHOC_TEN: string;
+}
+
+export interface CanhBaoHocVu {
+  ID?: string;
+  THOIGIAN?: string;
+  MUCXULY?: string;
+  MUCXULY_TEN?: string;
+  CHUONGTRINH?: string;
+  CHUONGTRINH_TEN?: string;
+  LOP?: string;
+  LOP_TEN?: string;
+  GHICHU?: string;
+  NGAYTAO?: string;
+  NAMHOC?: string;
+  HOCKY?: string;
+}
+
+export interface DiemRenLuyen {
+  ID: string;
+  QLSV_NGUOIHOC_ID: string;
+  QLSV_NGUOIHOC_MASO: string;
+  QLSV_NGUOIHOC_TEN: string;
+  QLSV_NGUOIHOC_HODEM: string;
+  DAOTAO_TOCHUCCHUONGTRINH_ID: string;
+  DAOTAO_TOCHUCCHUONGTRINH_MA: string;
+  DAOTAO_TOCHUCCHUONGTRINH_TEN: string;
+  DAOTAO_LOPQUANLY_ID: string;
+  DIEM: number;
+  DIEMQUYDOI: number;
+  XEPLOAI_ID: string;
+  XEPLOAI_MA: string;
+  XEPLOAI_TEN: string;
+  THOIGIAN?: string;
+  THOIGIAN_THUTU?: number;
+  DAOTAO_THOIGIANDAOTAO_ID?: string;
+}
+
+export interface DiemRenLuyenResponse {
+  rsKy: DiemRenLuyen[];
+  rsNam: DiemRenLuyen[];
+  rsToanKhoa: DiemRenLuyen[];
 }
 
 class GradeService {
@@ -368,8 +459,12 @@ class GradeService {
             NAMHOC: item.NAMHOC,
             HOCKY: item.HOCKY,
             DANHSACHDIEM: [],
+            TONGSO_TINCHI: 0,
+            SOTINCHI_TICHLUY: 0,
             DIEMTRUNGBINH_HE10: 0,
             DIEMTRUNGBINH_HE4: 0,
+            DIEMTRUNGBINH_TICHLUY_HE10: 0,
+            DIEMTRUNGBINH_TICHLUY_HE4: 0,
           });
         }
 
@@ -393,6 +488,71 @@ class GradeService {
         });
       });
 
+      // Gán điểm trung bình cho từng học kỳ
+      semesterMap.forEach((semester, key) => {
+        // NAMHOC đã có format "2025_2026", HOCKY là số
+        const namHoc = semester.NAMHOC;
+        const hocKy = semester.HOCKY;
+        
+        // Tìm điểm trung bình chung của học kỳ này (hệ 10) - PHAMVI = HOCKY
+        const avgHK_10 = avgData.find(
+          (item: any) => 
+            item.DAOTAO_THOIGIANDAOTAO_NAMHOC === namHoc && 
+            item.DAOTAO_THOIGIANDAOTAO_KY === hocKy &&
+            item.PHAMVITONGHOPDIEM_TEN === 'HOCKY' &&
+            item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
+            item.THANGDIEM_MA === '10'
+        );
+
+        // Tìm điểm trung bình chung của học kỳ này (hệ 4) - PHAMVI = HOCKY
+        const avgHK_4 = avgData.find(
+          (item: any) => 
+            item.DAOTAO_THOIGIANDAOTAO_NAMHOC === namHoc && 
+            item.DAOTAO_THOIGIANDAOTAO_KY === hocKy &&
+            item.PHAMVITONGHOPDIEM_TEN === 'HOCKY' &&
+            item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
+            item.THANGDIEM_MA === '4'
+        );
+
+        // Tìm điểm tích lũy tại học kỳ này (hệ 10) - PHAMVI = NHIEUKY
+        const tichLuyHK_10 = avgData.find(
+          (item: any) => 
+            item.DAOTAO_THOIGIANDAOTAO_NAMHOC === namHoc && 
+            item.DAOTAO_THOIGIANDAOTAO_KY === hocKy &&
+            item.PHAMVITONGHOPDIEM_TEN === 'NHIEUKY' &&
+            item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHTICHLUY' &&
+            item.THANGDIEM_MA === '10'
+        );
+
+        // Tìm điểm tích lũy tại học kỳ này (hệ 4) - PHAMVI = NHIEUKY
+        const tichLuyHK_4 = avgData.find(
+          (item: any) => 
+            item.DAOTAO_THOIGIANDAOTAO_NAMHOC === namHoc && 
+            item.DAOTAO_THOIGIANDAOTAO_KY === hocKy &&
+            item.PHAMVITONGHOPDIEM_TEN === 'NHIEUKY' &&
+            item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHTICHLUY' &&
+            item.THANGDIEM_MA === '4'
+        );
+
+        // Gán giá trị - chỉ hiển thị điểm của học kỳ đó (không hiển thị tích lũy)
+        // Tổng tín chỉ của học kỳ này (từ HOCKY)
+        const tongTinChi = avgHK_10?.TONGSOTINCHI || avgHK_4?.TONGSOTINCHI || 0;
+        semester.TONGSO_TINCHI = tongTinChi;
+        
+        // Tổng số tín chỉ tích lũy = tổng tín chỉ của học kỳ này (cùng giá trị)
+        semester.SOTINCHI_TICHLUY = tongTinChi;
+        
+        // Điểm trung bình của học kỳ này (từ HOCKY)
+        const diemTB_10 = avgHK_10?.DIEMTRUNGBINH || 0;
+        const diemTB_4 = avgHK_4?.DIEMTRUNGBINH || 0;
+        semester.DIEMTRUNGBINH_HE10 = diemTB_10;
+        semester.DIEMTRUNGBINH_HE4 = diemTB_4;
+        
+        // Điểm trung bình tích lũy = điểm trung bình của học kỳ này (cùng giá trị)
+        semester.DIEMTRUNGBINH_TICHLUY_HE10 = diemTB_10;
+        semester.DIEMTRUNGBINH_TICHLUY_HE4 = diemTB_4;
+      });
+
       // Sắp xếp theo năm học và học kỳ (mới nhất trước)
       const sortedSemesters = Array.from(semesterMap.values()).sort((a, b) => {
         const yearA = parseInt(a.NAMHOC.split('_')[0]);
@@ -401,13 +561,7 @@ class GradeService {
         return b.HOCKY - a.HOCKY;
       });
 
-      // Tìm thống kê toàn khóa
-      const toanKhoa_100 = avgData.find(
-        (item: any) => item.PHAMVITONGHOPDIEM_TEN === 'TOANKHOA' && 
-                       item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
-                       item.THANGDIEM_MA === '100'
-      );
-
+      // Tìm điểm trung bình chung (toàn khóa)
       const toanKhoa_10 = avgData.find(
         (item: any) => item.PHAMVITONGHOPDIEM_TEN === 'TOANKHOA' && 
                        item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
@@ -420,57 +574,71 @@ class GradeService {
                        item.THANGDIEM_MA === '4'
       );
 
-      // Tìm điểm tích lũy
+      // Tìm điểm trung bình tích lũy
       const tichLuy_10 = avgData.find(
         (item: any) => item.PHAMVITONGHOPDIEM_TEN === 'TOANKHOA' && 
-                       item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
-                       item.THANGDIEM_MA === '10' &&
-                       item.SOTCDAT > 0 &&
-                       item.DIEMTRUNGBINH > 0
+                       item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHTICHLUY' &&
+                       item.THANGDIEM_MA === '10'
       );
 
       const tichLuy_4 = avgData.find(
         (item: any) => item.PHAMVITONGHOPDIEM_TEN === 'TOANKHOA' && 
-                       item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
-                       item.THANGDIEM_MA === '4' &&
-                       item.SOTCDAT > 0 &&
-                       item.DIEMTRUNGBINH > 0
+                       item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHTICHLUY' &&
+                       item.THANGDIEM_MA === '4'
       );
 
-      // Lấy thống kê (ưu tiên thang 100 cho tổng tín chỉ)
-      const mainStats = toanKhoa_100 || toanKhoa_10 || toanKhoa_4;
+      // console.log('[GradeService] Stats from API:', {
+      //   mainStats: toanKhoa_4 ? {
+      //     TONGSOTINCHI: toanKhoa_4.TONGSOTINCHI,
+      //     SOTCDAT: toanKhoa_4.SOTCDAT,
+      //   } : null,
+      //   toanKhoa_10: toanKhoa_10 ? {
+      //     DIEMTRUNGBINH: toanKhoa_10.DIEMTRUNGBINH,
+      //   } : null,
+      //   toanKhoa_4: toanKhoa_4 ? {
+      //     DIEMTRUNGBINH: toanKhoa_4.DIEMTRUNGBINH,
+      //   } : null,
+      //   tichLuy_10: tichLuy_10 ? {
+      //     DIEMTRUNGBINH: tichLuy_10.DIEMTRUNGBINH,
+      //     SOTCDAT: tichLuy_10.SOTCDAT,
+      //   } : null,
+      //   tichLuy_4: tichLuy_4 ? {
+      //     DIEMTRUNGBINH: tichLuy_4.DIEMTRUNGBINH,
+      //     SOTCDAT: tichLuy_4.SOTCDAT,
+      //   } : null,
+      // });
 
-      console.log('[GradeService] Stats from API:', {
-        mainStats: mainStats ? {
-          TONGSOTINCHI: mainStats.TONGSOTINCHI,
-          SOTCDAT: mainStats.SOTCDAT,
-        } : null,
-        toanKhoa_10: toanKhoa_10 ? {
-          DIEMTRUNGBINH: toanKhoa_10.DIEMTRUNGBINH,
-        } : null,
-        toanKhoa_4: toanKhoa_4 ? {
-          DIEMTRUNGBINH: toanKhoa_4.DIEMTRUNGBINH,
-        } : null,
-        tichLuy_10: tichLuy_10 ? {
-          DIEMTRUNGBINH: tichLuy_10.DIEMTRUNGBINH,
-          SOTCDAT: tichLuy_10.SOTCDAT,
-        } : null,
-        tichLuy_4: tichLuy_4 ? {
-          DIEMTRUNGBINH: tichLuy_4.DIEMTRUNGBINH,
-          SOTCDAT: tichLuy_4.SOTCDAT,
-        } : null,
-      });
+      // Transform học phần chưa hoàn thành từ API
+      const hocPhanChuaHoanThanh: HocPhanChuaHoanThanh[] = (data.rsHocPhanChuaHoanThanh || []).map((item: any) => ({
+        ID: item.ID,
+        DAOTAO_HOCPHAN_ID: item.DAOTAO_HOCPHAN_ID,
+        DAOTAO_HOCPHAN_MA: item.DAOTAO_HOCPHAN_MA,
+        DAOTAO_HOCPHAN_TEN: item.DAOTAO_HOCPHAN_TEN,
+        DAOTAO_HOCPHAN_HOCTRINH: item.DAOTAO_HOCPHAN_HOCTRINH,
+        NAMHOC: item.NAMHOC,
+        HOCKY: item.HOCKY,
+        LANHOC: item.LANHOC,
+        LANTHI: item.LANTHI,
+        DIEM: item.DIEM,
+        DIEMQUYDOI: item.DIEMQUYDOI,
+        DIEMQUYDOI_TEN: item.DIEMQUYDOI_TEN,
+        DANHGIA_MA: item.DANHGIA_MA,
+        DANHGIA_TEN: item.DANHGIA_TEN,
+        GHICHU: item.GHICHU,
+        DIEM_DANHSACHHOC_TEN: item.DIEM_DANHSACHHOC_TEN || '',
+      }));
 
       return {
         DANHSACH_HOCKY: sortedSemesters,
         THONGKE: {
-          TONGSO_TINCHI: mainStats?.TONGSOTINCHI || 0,
-          SOTINCHI_TICHLUY: tichLuy_4?.SOTCDAT || mainStats?.SOTCDAT || 0,
+          TONGSO_TINCHI: toanKhoa_4?.TONGSOTINCHI || 0,
+          SOTINCHI_TICHLUY: tichLuy_4?.SOTCDAT || 0,
           DIEMTRUNGBINH_HE10: toanKhoa_10?.DIEMTRUNGBINH || 0,
           DIEMTRUNGBINH_HE4: toanKhoa_4?.DIEMTRUNGBINH || 0,
           DIEMTRUNGBINH_TICHLUY_HE10: tichLuy_10?.DIEMTRUNGBINH || 0,
           DIEMTRUNGBINH_TICHLUY_HE4: tichLuy_4?.DIEMTRUNGBINH || 0,
         },
+        HOCPHAN_CHUAHOANTHANH: hocPhanChuaHoanThanh,
       };
     }
 
@@ -489,13 +657,13 @@ class GradeService {
 
   async refreshGrades(): Promise<GradeResponse> {
     try {
-      console.log('[GradeService] Refreshing grade data...');
+      // console.log('[GradeService] Refreshing grade data...');
       await this.clearCache();
       // Xóa cache standard data để force reload
       await AsyncStorage.removeItem(this.standardDataCacheKey);
       return await this.getGrades();
     } catch (error) {
-      console.error('[GradeService] Error refreshing grades:', error);
+      // console.error('[GradeService] Error refreshing grades:', error);
       throw error;
     }
   }
@@ -639,6 +807,318 @@ class GradeService {
       return { text: 'Không đạt', color: '#EF4444' };
     }
     return { text: danhGia, color: '#6B7280' };
+  }
+
+  // Lấy danh sách quyết định cá nhân
+  async getQuyetDinh(): Promise<QuyetDinh[]> {
+    try {
+      // console.log('[GradeService] Getting quyet dinh...');
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+      
+      // console.log('[GradeService] User ID:', userId.substring(0, 8) + '...');
+
+      const requestBody = {
+        func: 'pkg_congthongtin_hssv_thongtin.LayDSQDCaNhan',
+        iM: 'AzzSystem',
+        strNguoiDung_Id: userId,
+        strChucNang_Id: '458922CCB7064213A3D94F7511852261',
+        strNguoiThucHien_Id: userId,
+      };
+
+      const encryptionKey = 'DSA4BRIQBQIgDykgLwPP';
+      
+      // console.log('[GradeService] Calling API...');
+
+      const response = await fetch(
+        `https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            A: AE(JSON.stringify(requestBody), encryptionKey),
+          }),
+        }
+      );
+
+      // console.log('[GradeService] Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[GradeService] Response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const temp = await response.json();
+      
+      // console.log('[GradeService] Response success:', temp.Success);
+
+      if (!temp.Success) {
+        console.error('[GradeService] API error:', temp.Message);
+        throw new Error(temp.Message || 'Lỗi khi lấy danh sách quyết định');
+      }
+
+      const decryptedData = AD(temp.Data.B, requestBody.iM);
+
+      if (!decryptedData) {
+        console.error('[GradeService] Cannot decrypt data');
+        throw new Error('Không thể giải mã dữ liệu');
+      }
+
+      const apiData = JSON.parse(decryptedData);
+      
+      // console.log('[GradeService] API Data type:', Array.isArray(apiData) ? 'Array' : 'Object');
+      // console.log('[GradeService] Full API Data:', JSON.stringify(apiData, null, 2));
+      
+      // API trả về trực tiếp array, không phải object có key Data
+      const decisions = Array.isArray(apiData) ? apiData : (apiData.Data || []);
+      // console.log('[GradeService] Got decisions:', decisions.length, 'items');
+      
+      return decisions;
+    } catch (error) {
+      console.error('[GradeService] Error fetching quyet dinh:', error);
+      throw error;
+    }
+  }
+
+  // Lấy danh sách văn bằng - chứng chỉ
+  async getVanBangChungChi(): Promise<VanBangChungChi[]> {
+    try {
+      // console.log('[GradeService] Getting van bang chung chi...');
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+      
+      // console.log('[GradeService] User ID:', userId.substring(0, 8) + '...');
+
+      const requestBody = {
+        func: 'pkg_congthongtin_hssv_thongtin.LayDSTN_KetQua_CongNhan_VB',
+        iM: 'AzzSystem',
+        strNguoiDung_Id: userId,
+        strChucNang_Id: '458922CCB7064213A3D94F7511852261',
+        strNguoiThucHien_Id: userId,
+      };
+
+      const encryptionKey = 'DSA4BRIVDx4KJDUQNCAeAi4vJg8pIC8eFwMP';
+      
+      // console.log('[GradeService] Calling API...');
+
+      const response = await fetch(
+        `https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            A: AE(JSON.stringify(requestBody), encryptionKey),
+          }),
+        }
+      );
+
+      // console.log('[GradeService] Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[GradeService] Response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const temp = await response.json();
+      
+      // console.log('[GradeService] Response success:', temp.Success);
+
+      if (!temp.Success) {
+        console.error('[GradeService] API error:', temp.Message);
+        throw new Error(temp.Message || 'Lỗi khi lấy danh sách văn bằng - chứng chỉ');
+      }
+
+      const decryptedData = AD(temp.Data.B, requestBody.iM);
+
+      if (!decryptedData) {
+        console.error('[GradeService] Cannot decrypt data');
+        throw new Error('Không thể giải mã dữ liệu');
+      }
+
+      const apiData = JSON.parse(decryptedData);
+      
+      // console.log('[GradeService] API Data type:', Array.isArray(apiData) ? 'Array' : 'Object');
+      // console.log('[GradeService] Full API Data:', JSON.stringify(apiData, null, 2));
+      
+      // API trả về trực tiếp array hoặc object có key Data
+      const certificates = Array.isArray(apiData) ? apiData : (apiData.Data || []);
+      // console.log('[GradeService] Got certificates:', certificates.length, 'items');
+      
+      return certificates;
+    } catch (error) {
+      console.error('[GradeService] Error fetching van bang chung chi:', error);
+      throw error;
+    }
+  }
+
+  // Lấy danh sách cảnh báo học vụ
+  async getCanhBaoHocVu(): Promise<CanhBaoHocVu[]> {
+    try {
+      // console.log('[GradeService] Getting canh bao hoc vu...');
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+      const chuongTrinhId = await this.getChuongTrinhId();
+      
+      //console.log('[GradeService] User ID:', userId.substring(0, 8) + '...');
+     // console.log('[GradeService] ChuongTrinh ID:', chuongTrinhId.substring(0, 8) + '...');
+
+      const requestBody = {
+        func: 'pkg_congthongtin_hssv_thongtin.LayDSKetQuaXuLyHocVu',
+        iM: 'AzzSystem',
+        strQLSV_NguoiHoc_Id: userId,
+        strDaoTao_ChuongTrinh_Id: chuongTrinhId,
+        strChucNang_Id: '458922CCB7064213A3D94F7511852261',
+        strNguoiThucHien_Id: userId,
+      };
+
+      const encryptionKey = 'DSA4BRIKJDUQNCAZNA04CS4iFzQP';
+      
+      // console.log('[GradeService] Calling API...');
+
+      const response = await fetch(
+        `https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            A: AE(JSON.stringify(requestBody), encryptionKey),
+          }),
+        }
+      );
+
+      // console.log('[GradeService] Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[GradeService] Response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const temp = await response.json();
+      
+      // console.log('[GradeService] Response success:', temp.Success);
+
+      if (!temp.Success) {
+        console.error('[GradeService] API error:', temp.Message);
+        throw new Error(temp.Message || 'Lỗi khi lấy danh sách cảnh báo học vụ');
+      }
+
+      const decryptedData = AD(temp.Data.B, requestBody.iM);
+
+      if (!decryptedData) {
+        console.error('[GradeService] Cannot decrypt data');
+        throw new Error('Không thể giải mã dữ liệu');
+      }
+
+      const apiData = JSON.parse(decryptedData);
+      
+     // console.log('[GradeService] API Data type:', Array.isArray(apiData) ? 'Array' : 'Object');
+    //console.log('[GradeService] Full API Data:', JSON.stringify(apiData, null, 2));
+      
+      // API trả về trực tiếp array hoặc object có key Data
+      const warnings = Array.isArray(apiData) ? apiData : (apiData.Data || []);
+      console.log('[GradeService] Got warnings:', warnings.length, 'items');
+      
+      return warnings;
+    } catch (error) {
+      console.error('[GradeService] Error fetching canh bao hoc vu:', error);
+      throw error;
+    }
+  }
+
+  // Lấy kết quả rèn luyện
+  async getDiemRenLuyen(): Promise<DiemRenLuyenResponse> {
+    try {
+      // console.log('[GradeService] Getting diem ren luyen...');
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+      
+      // console.log('[GradeService] User ID:', userId.substring(0, 8) + '...');
+
+      const requestBody = {
+        func: 'pkg_congthongtin_hssv_thongtin.LayKQRenLuyenCaNhan',
+        iM: 'AzzSystem',
+        strQLSV_NguoiHoc_Id: userId,
+        strDaoTao_ChuongTrinh_Id: null,
+        strChucNang_Id: '458922CCB7064213A3D94F7511852261',
+        strNguoiThucHien_Id: userId,
+      };
+
+      const encryptionKey = 'DSA4ChATJC8NNDgkLwIgDykgLwPP';
+      
+      // console.log('[GradeService] Calling API...');
+
+      const response = await fetch(
+        `https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            A: AE(JSON.stringify(requestBody), encryptionKey),
+          }),
+        }
+      );
+
+      // console.log('[GradeService] Response status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[GradeService] Response error:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const temp = await response.json();
+      
+      // console.log('[GradeService] Response success:', temp.Success);
+
+      if (!temp.Success) {
+        console.error('[GradeService] API error:', temp.Message);
+        throw new Error(temp.Message || 'Lỗi khi lấy điểm rèn luyện');
+      }
+
+      const decryptedData = AD(temp.Data.B, requestBody.iM);
+
+      if (!decryptedData) {
+        console.error('[GradeService] Cannot decrypt data');
+        throw new Error('Không thể giải mã dữ liệu');
+      }
+
+      const apiData = JSON.parse(decryptedData);
+      
+      //console.log('[GradeService] Full API Data:', JSON.stringify(apiData, null, 2));
+      
+      // API trả về trực tiếp object với rsKy, rsNam, rsToanKhoa
+      const result = {
+        rsKy: apiData.rsKy || [],
+        rsNam: apiData.rsNam || [],
+        rsToanKhoa: apiData.rsToanKhoa || [],
+      };
+      
+      // console.log('[GradeService] Got diem ren luyen:', {
+      //   ky: result.rsKy.length,
+      //   nam: result.rsNam.length,
+      //   toanKhoa: result.rsToanKhoa.length,
+      // });
+      
+      return result;
+    } catch (error) {
+      console.error('[GradeService] Error fetching diem ren luyen:', error);
+      throw error;
+    }
   }
 }
 
