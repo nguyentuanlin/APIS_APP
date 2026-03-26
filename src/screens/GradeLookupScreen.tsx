@@ -1071,6 +1071,123 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 12,
   },
+  khoiContainer: {
+    padding: 16,
+    gap: 12,
+  },
+  khoiCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    overflow: 'hidden',
+  },
+  khoiHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  khoiHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  khoiInfo: {
+    marginLeft: 8,
+    flex: 1,
+  },
+  khoiTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  khoiSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  khoiStats: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  khoiStatItem: {
+    alignItems: 'center',
+  },
+  khoiStatLabel: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
+  khoiStatValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#3B82F6',
+    marginTop: 2,
+  },
+  khoiBody: {
+    padding: 16,
+    gap: 12,
+    backgroundColor: '#F9FAFB',
+  },
+  khoiCourseItem: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 12,
+    borderLeftWidth: 3,
+    borderLeftColor: '#3B82F6',
+  },
+  khoiCourseHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  khoiCourseCode: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#3B82F6',
+  },
+  khoiCourseBadge: {
+    backgroundColor: '#10B981',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 8,
+  },
+  khoiCourseBadgeText: {
+    fontSize: 11,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+  },
+  khoiCourseName: {
+    fontSize: 14,
+    color: '#1F2937',
+    marginBottom: 8,
+  },
+  khoiCourseDetails: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  khoiCourseDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  khoiCourseDetailLabel: {
+    fontSize: 13,
+    color: '#6B7280',
+  },
+  khoiCourseDetailValue: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
 });
 
 export default GradeLookupScreen;
