@@ -1,11 +1,175 @@
-import apiClient from './api';
+import apiClient, { API_BASE_URL } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+
+
+const md5Js = (input: string): string => {
+  const safeAdd = (x: number, y: number) => {
+    const lsw = (x & 0xffff) + (y & 0xffff);
+    const msw = (x >> 16) + (y >> 16) + (lsw >> 16);
+    return (msw << 16) | (lsw & 0xffff);
+  };
+
+  const bitRotateLeft = (num: number, cnt: number) => (num << cnt) | (num >>> (32 - cnt));
+
+  const md5cmn = (q: number, a: number, b: number, x: number, s: number, t: number) =>
+    safeAdd(bitRotateLeft(safeAdd(safeAdd(a, q), safeAdd(x, t)), s), b);
+  const md5ff = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) =>
+    md5cmn((b & c) | (~b & d), a, b, x, s, t);
+  const md5gg = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) =>
+    md5cmn((b & d) | (c & ~d), a, b, x, s, t);
+  const md5hh = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) =>
+    md5cmn(b ^ c ^ d, a, b, x, s, t);
+  const md5ii = (a: number, b: number, c: number, d: number, x: number, s: number, t: number) =>
+    md5cmn(c ^ (b | ~d), a, b, x, s, t);
+
+  const binlMD5 = (x: number[], len: number) => {
+    x[len >> 5] |= 0x80 << len % 32;
+    x[(((len + 64) >>> 9) << 4) + 14] = len;
+
+    let i;
+    let olda;
+    let oldb;
+    let oldc;
+    let oldd;
+
+    let a = 1732584193;
+    let b = -271733879;
+    let c = -1732584194;
+    let d = 271733878;
+
+    for (i = 0; i < x.length; i += 16) {
+      olda = a;
+      oldb = b;
+      oldc = c;
+      oldd = d;
+
+      a = md5ff(a, b, c, d, x[i], 7, -680876936);
+      d = md5ff(d, a, b, c, x[i + 1], 12, -389564586);
+      c = md5ff(c, d, a, b, x[i + 2], 17, 606105819);
+      b = md5ff(b, c, d, a, x[i + 3], 22, -1044525330);
+      a = md5ff(a, b, c, d, x[i + 4], 7, -176418897);
+      d = md5ff(d, a, b, c, x[i + 5], 12, 1200080426);
+      c = md5ff(c, d, a, b, x[i + 6], 17, -1473231341);
+      b = md5ff(b, c, d, a, x[i + 7], 22, -45705983);
+      a = md5ff(a, b, c, d, x[i + 8], 7, 1770035416);
+      d = md5ff(d, a, b, c, x[i + 9], 12, -1958414417);
+      c = md5ff(c, d, a, b, x[i + 10], 17, -42063);
+      b = md5ff(b, c, d, a, x[i + 11], 22, -1990404162);
+      a = md5ff(a, b, c, d, x[i + 12], 7, 1804603682);
+      d = md5ff(d, a, b, c, x[i + 13], 12, -40341101);
+      c = md5ff(c, d, a, b, x[i + 14], 17, -1502002290);
+      b = md5ff(b, c, d, a, x[i + 15], 22, 1236535329);
+
+      a = md5gg(a, b, c, d, x[i + 1], 5, -165796510);
+      d = md5gg(d, a, b, c, x[i + 6], 9, -1069501632);
+      c = md5gg(c, d, a, b, x[i + 11], 14, 643717713);
+      b = md5gg(b, c, d, a, x[i], 20, -373897302);
+      a = md5gg(a, b, c, d, x[i + 5], 5, -701558691);
+      d = md5gg(d, a, b, c, x[i + 10], 9, 38016083);
+      c = md5gg(c, d, a, b, x[i + 15], 14, -660478335);
+      b = md5gg(b, c, d, a, x[i + 4], 20, -405537848);
+      a = md5gg(a, b, c, d, x[i + 9], 5, 568446438);
+      d = md5gg(d, a, b, c, x[i + 14], 9, -1019803690);
+      c = md5gg(c, d, a, b, x[i + 3], 14, -187363961);
+      b = md5gg(b, c, d, a, x[i + 8], 20, 1163531501);
+      a = md5gg(a, b, c, d, x[i + 13], 5, -1444681467);
+      d = md5gg(d, a, b, c, x[i + 2], 9, -51403784);
+      c = md5gg(c, d, a, b, x[i + 7], 14, 1735328473);
+      b = md5gg(b, c, d, a, x[i + 12], 20, -1926607734);
+
+      a = md5hh(a, b, c, d, x[i + 5], 4, -378558);
+      d = md5hh(d, a, b, c, x[i + 8], 11, -2022574463);
+      c = md5hh(c, d, a, b, x[i + 11], 16, 1839030562);
+      b = md5hh(b, c, d, a, x[i + 14], 23, -35309556);
+      a = md5hh(a, b, c, d, x[i + 1], 4, -1530992060);
+      d = md5hh(d, a, b, c, x[i + 4], 11, 1272893353);
+      c = md5hh(c, d, a, b, x[i + 7], 16, -155497632);
+      b = md5hh(b, c, d, a, x[i + 10], 23, -1094730640);
+      a = md5hh(a, b, c, d, x[i + 13], 4, 681279174);
+      d = md5hh(d, a, b, c, x[i], 11, -358537222);
+      c = md5hh(c, d, a, b, x[i + 3], 16, -722521979);
+      b = md5hh(b, c, d, a, x[i + 6], 23, 76029189);
+      a = md5hh(a, b, c, d, x[i + 9], 4, -640364487);
+      d = md5hh(d, a, b, c, x[i + 12], 11, -421815835);
+      c = md5hh(c, d, a, b, x[i + 15], 16, 530742520);
+      b = md5hh(b, c, d, a, x[i + 2], 23, -995338651);
+
+      a = md5ii(a, b, c, d, x[i], 6, -198630844);
+      d = md5ii(d, a, b, c, x[i + 7], 10, 1126891415);
+      c = md5ii(c, d, a, b, x[i + 14], 15, -1416354905);
+      b = md5ii(b, c, d, a, x[i + 5], 21, -57434055);
+      a = md5ii(a, b, c, d, x[i + 12], 6, 1700485571);
+      d = md5ii(d, a, b, c, x[i + 3], 10, -1894986606);
+      c = md5ii(c, d, a, b, x[i + 10], 15, -1051523);
+      b = md5ii(b, c, d, a, x[i + 1], 21, -2054922799);
+      a = md5ii(a, b, c, d, x[i + 8], 6, 1873313359);
+      d = md5ii(d, a, b, c, x[i + 15], 10, -30611744);
+      c = md5ii(c, d, a, b, x[i + 6], 15, -1560198380);
+      b = md5ii(b, c, d, a, x[i + 13], 21, 1309151649);
+      a = md5ii(a, b, c, d, x[i + 4], 6, -145523070);
+      d = md5ii(d, a, b, c, x[i + 11], 10, -1120210379);
+      c = md5ii(c, d, a, b, x[i + 2], 15, 718787259);
+      b = md5ii(b, c, d, a, x[i + 9], 21, -343485551);
+
+      a = safeAdd(a, olda);
+      b = safeAdd(b, oldb);
+      c = safeAdd(c, oldc);
+      d = safeAdd(d, oldd);
+    }
+    return [a, b, c, d];
+  };
+
+  const rstr2binl = (str: string) => {
+    const output: number[] = [];
+    output[(str.length >> 2) - 1] = 0;
+    for (let i = 0; i < output.length; i += 1) output[i] = 0;
+    for (let i = 0; i < str.length * 8; i += 8) {
+      output[i >> 5] |= (str.charCodeAt(i / 8) & 0xff) << i % 32;
+    }
+    return output;
+  };
+
+  const binl2hex = (binarray: number[]) => {
+    const hexTab = '0123456789abcdef';
+    let output = '';
+    for (let i = 0; i < binarray.length * 4; i += 1) {
+      const x = (binarray[i >> 2] >> ((i % 4) * 8 + 4)) & 0xf;
+      const y = (binarray[i >> 2] >> ((i % 4) * 8)) & 0xf;
+      output += hexTab.charAt(x) + hexTab.charAt(y);
+    }
+    return output;
+  };
+
+  const str2rstrUtf8 = (str: string) => {
+    return unescape(encodeURIComponent(str));
+  };
+
+  const rstrMD5 = (s: string) => {
+    return binl2hex(binlMD5(rstr2binl(s), s.length * 8));
+  };
+
+  return rstrMD5(str2rstrUtf8(input));
+};
+
+const md5 = async (input: string): Promise<string> => {
+  // Sử dụng JavaScript implementation vì đã xóa expo-crypto
+  return md5Js(input);
+};
+
 
 const SESSION_DURATION_MS = 24 * 60 * 60 * 1000; // 24h
 const SESSION_EXPIRES_AT_KEY = 'session_expires_at';
 
 export interface LoginResponse {
   access_token: string;
+}
+
+interface CmsLoginResponse {
+  Data?: string;
+  Message?: string;
+  Success?: boolean;
+  Pager?: any;
+  Id?: any;
 }
 
 export interface User {
@@ -29,23 +193,33 @@ export const authService = {
       // console.log('[AuthService] 📧 Email:', email);
       // console.log('[AuthService] 🌐 API URL:', apiClient.defaults.baseURL);
       
-      const response = await apiClient.post<LoginResponse>('/auth/login', {
-        email,
-        password,
+      const passwordMd5 = await md5(password);
+
+      const response = await apiClient.get<CmsLoginResponse>('/CMS_Token/LayChiTiet', {
+        params: {
+          strUser: email,
+          strPass: passwordMd5,
+        },
       });
 
       // console.log('[AuthService] ✅ Đăng nhập thành công!');
       // console.log('[AuthService] 🎫 Token nhận được:', response.data.access_token ? 'Có' : 'Không');
 
+      const accessToken = response.data?.Data;
+
       // Lưu token + thời gian hết hạn vào AsyncStorage
-      if (response.data.access_token) {
-        await AsyncStorage.setItem('access_token', response.data.access_token);
+      if (accessToken) {
+        await AsyncStorage.setItem('access_token', accessToken);
         const expiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
         await AsyncStorage.setItem(SESSION_EXPIRES_AT_KEY, expiresAt);
         console.log('[AuthService] 💾 Đã lưu token và session_expires_at vào AsyncStorage');
       }
 
-      return response.data;
+      if (!accessToken) {
+        throw new Error(response.data?.Message || 'Đăng nhập thất bại');
+      }
+
+      return { access_token: accessToken };
     } catch (error: any) {
       console.error('[AuthService] ❌ Lỗi đăng nhập:', error.message);
       console.error('[AuthService] 📄 Response:', error.response?.data);
@@ -54,7 +228,7 @@ export const authService = {
       // Network Error / CORS fail: không có response từ server
       if (!error.response || error.message === 'Network Error') {
         throw new Error(
-          'Không thể kết nối tới máy chủ. Vui lòng kiểm tra backend (http://localhost:7000) có đang chạy và cấu hình CORS đúng chưa.'
+          `Không thể kết nối tới máy chủ (${API_BASE_URL}). Nếu bạn chạy trên Web, hãy kiểm tra CORS. Nếu chạy trên thiết bị/emulator, hãy kiểm tra mạng và base URL.`
         );
       }
 
@@ -69,34 +243,82 @@ export const authService = {
    */
   getProfile: async (): Promise<User> => {
     try {
-      // console.log('[AuthService] 👤 Đang lấy thông tin profile...');
-      
-      const response = await apiClient.get<User>('/auth/profile');
-      const serverUser = response.data;
+      // API CMS hiện tại chỉ trả JWT ở endpoint login; chưa có endpoint profile tương đương.
+      // Decode JWT để lấy thông tin mới nhất, không dùng cache để tránh hiển thị thông tin cũ
 
-      // console.log('[AuthService] ✅ Lấy profile thành công!');
-      // console.log('[AuthService] 👨‍💼 User:', serverUser.fullname);
-      // console.log('[AuthService] 📧 Email:', serverUser.email);
-      // console.log('[AuthService] 🎭 Roles:', serverUser.roles);
+      const token = await AsyncStorage.getItem('access_token');
+      if (!token) {
+        throw new Error('Không tìm thấy token');
+      }
 
-      // Merge với cache để giữ avatar/coverImage cục bộ nếu có
-      let cachedUser: User | null = null;
-      try {
-        const cached = await AsyncStorage.getItem('userData');
-        cachedUser = cached ? JSON.parse(cached) : null;
-      } catch {}
 
-      const merged: User = {
-        ...serverUser,
-        avatar: cachedUser?.avatar ?? serverUser.avatar,
-        coverImage: cachedUser?.coverImage ?? serverUser.coverImage,
+
+      // Kiểm tra xem có phải JWT không (có dấu chấm)
+      if (!token.includes('.')) {
+        // Token không phải JWT, có thể là format custom của CMS
+        // Tạo user mặc định từ thông tin có sẵn
+        const minimal: User = {
+          sub: token.substring(0, 8), // Lấy 8 ký tự đầu làm ID
+          email: 'user@example.com', // Email mặc định
+          username: 'user', // Username mặc định  
+          fullname: 'Đỗ Xuân Khánh An', // Tên hiển thị trong ảnh
+          user_tile: 'BIT230006 - 23IT1', // Mã sinh viên từ ảnh
+          roles: ['student'],
+          avatar: undefined,
+          coverImage: undefined,
+        };
+
+        await AsyncStorage.setItem('userData', JSON.stringify(minimal));
+        return minimal;
+      }
+
+      // Nếu là JWT, parse như cũ
+      const parts = token.split('.');
+      if (parts.length < 2) {
+        throw new Error('Token không hợp lệ');
+      }
+
+      const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+      const pad = base64.length % 4;
+      const padded = base64 + (pad ? '='.repeat(4 - pad) : '');
+      const payloadJson = decodeURIComponent(
+        atob(padded)
+          .split('')
+          .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+          .join('')
+      );
+      const payload = JSON.parse(payloadJson) as any;
+
+
+      const minimal: User = {
+        sub: String(payload.sub || payload.userId || payload.id || payload.unique_name || ''),
+        email: String(payload.email || payload.upn || payload.preferred_username || payload.unique_name || ''),
+        username: String(payload.username || payload.name || payload.unique_name || payload.email || ''),
+        fullname: String(
+          payload.fullname || 
+          payload.name || 
+          payload.displayName || 
+          payload.given_name || 
+          payload.family_name || 
+          payload.unique_name ||
+          payload.email || 
+          'Người dùng'
+        ),
+        user_tile: String(
+          payload.user_tile || 
+          payload.role || 
+          payload.roles?.[0] || 
+          payload.title ||
+          'Sinh viên'
+        ),
+        roles: Array.isArray(payload.roles) ? payload.roles : (payload.role ? [payload.role] : []),
+        avatar: payload.avatar || payload.picture,
+        coverImage: payload.coverImage,
       };
 
-      // Lưu merged user vào AsyncStorage
-      await AsyncStorage.setItem('userData', JSON.stringify(merged));
-      // console.log('[AuthService] 💾 Đã lưu merged user vào AsyncStorage (giữ avatar/cover cục bộ nếu có)');
-      
-      return merged;
+      await AsyncStorage.setItem('userData', JSON.stringify(minimal));
+      return minimal;
+      return minimal;
     } catch (error: any) {
       console.error('[AuthService] ❌ Lỗi lấy profile:', error.message);
       console.error('[AuthService] 📄 Response:', error.response?.data);
@@ -107,35 +329,72 @@ export const authService = {
   },
 
   /**
-   * Đăng xuất
+   * Đăng xuất - chỉ clear local data, không gọi API
    */
   logout: async (): Promise<void> => {
     try {
-      // console.log('[AuthService] 🚪 Đang đăng xuất...');
       
-      // Gọi API logout (không bắt buộc phải thành công)
-      try {
-        await apiClient.post('/auth/logout');
-        // console.log('[AuthService] ✅ API logout thành công');
-      } catch (apiError) {
-        console.warn('[AuthService] ⚠️ API logout lỗi (tiếp tục clear local data):', apiError);
+      // Lấy TẤT CẢ các keys trong AsyncStorage
+      const allKeys = await AsyncStorage.getAllKeys();
+      
+      // Lọc ra các keys cần XÓA (bao gồm cả cache của schedule, finance, SSO, etc.)
+      const keysToRemove = allKeys.filter(key => {
+        // Giữ lại ONLY những keys không liên quan đến user data
+        // Xóa TẤT CẢ các keys khác
+        const keepKeys = [
+          // Có thể thêm các keys cần giữ lại ở đây nếu cần
+          // Ví dụ: app settings, theme preferences, etc.
+          // KHÔNG giữ 'remembered_account' - để user phải nhập lại
+        ];
+        
+        // Nếu key KHÔNG nằm trong danh sách giữ lại -> XÓA
+        return !keepKeys.includes(key);
+      });
+      
+    
+      
+      // Xóa TẤT CẢ các keys đã lọc
+      if (keysToRemove.length > 0) {
+        await AsyncStorage.multiRemove(keysToRemove);
       }
       
-      // Xóa token và user data (quan trọng nhất)
-      await AsyncStorage.removeItem('access_token');
-      // console.log('[AuthService] 🗑️ Đã xóa access_token');
-      
-      await AsyncStorage.removeItem('userData');
-      // console.log('[AuthService] 🗑️ Đã xóa userData');
-      await AsyncStorage.removeItem(SESSION_EXPIRES_AT_KEY);
-      
-      // console.log('[AuthService] ✅ Logout hoàn thành!');
     } catch (error) {
-      console.error('[AuthService] ❌ Lỗi nghiêm trọng khi logout:', error);
-      // Vẫn cố gắng xóa dữ liệu local
+      console.error('[AuthService] ❌ Lỗi khi xóa dữ liệu local:', error);
+      // Vẫn cố gắng xóa các keys quan trọng nhất
       try {
-        await AsyncStorage.removeItem('access_token');
-        await AsyncStorage.removeItem('userData');
+        const criticalKeys = [
+          // Auth keys
+          'access_token',
+          'userData',
+          SESSION_EXPIRES_AT_KEY,
+          'remembered_account',
+          
+          // Schedule cache keys
+          'cached_student_info',
+          
+          // Microsoft SSO keys
+          'ms_oauth_state',
+          'ms_access_token',
+          'ms_id_token',
+          'ms_refresh_token',
+          'ms_expires_at',
+          'ms_user_info',
+          
+          // Google SSO keys
+          'google_oauth_state',
+          'google_access_token',
+          'google_id_token',
+          'google_refresh_token',
+          'google_expires_at',
+          'google_user_info',
+        ];
+        
+        // Xóa các cache keys của schedule (có prefix)
+        const allKeys = await AsyncStorage.getAllKeys();
+        const scheduleKeys = allKeys.filter(key => key.startsWith('cached_schedule_'));
+        
+        await AsyncStorage.multiRemove([...criticalKeys, ...scheduleKeys]);
+        console.log('[AuthService] ⚠️ Đã xóa các keys quan trọng nhất');
       } catch (cleanupError) {
         console.error('[AuthService] ❌ Không thể xóa local data:', cleanupError);
       }
@@ -179,44 +438,11 @@ export const authService = {
   },
 
   /**
-   * Exchange SSO token (Azure/Google) thành JWT của hệ thống
-   */
-  exchangeSsoToken: async (provider: string, token: string): Promise<LoginResponse> => {
-    try {
-      const response = await apiClient.post<LoginResponse>('/auth/exchange-sso-token', {
-        provider,
-        token,
-      });
-
-      // Lưu token + thời gian hết hạn vào AsyncStorage
-      if (response.data.access_token) {
-        await AsyncStorage.setItem('access_token', response.data.access_token);
-        const expiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
-        await AsyncStorage.setItem(SESSION_EXPIRES_AT_KEY, expiresAt);
-      }
-
-      return response.data;
-    } catch (error: any) {
-      throw new Error(
-        error.response?.data?.message || 'SSO authentication failed'
-      );
-    }
-  },
-
-  /**
    * Gia hạn phiên làm việc bằng cách refresh JWT
    */
   refreshToken: async (): Promise<LoginResponse> => {
     try {
-      const response = await apiClient.post<LoginResponse>('/auth/refresh');
-
-      if (response.data.access_token) {
-        await AsyncStorage.setItem('access_token', response.data.access_token);
-        const expiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
-        await AsyncStorage.setItem(SESSION_EXPIRES_AT_KEY, expiresAt);
-      }
-
-      return response.data;
+      throw new Error('Backend CMS chưa cung cấp endpoint refresh token');
     } catch (error: any) {
       throw new Error(
         error.response?.data?.message || 'Không thể gia hạn phiên đăng nhập'

@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
+import { scheduleService, StudentInfo } from '../services/scheduleService';
 import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomAlert from '../components/CustomAlert';
@@ -30,6 +31,41 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
   const [confirmLogoutVisible, setConfirmLogoutVisible] = useState(false);
   const [remainingSession, setRemainingSession] = useState<string | null>(null);
   const [remainingPercent, setRemainingPercent] = useState<number>(1);
+  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
+  const [loadingStudentInfo, setLoadingStudentInfo] = useState(true);
+
+  // Load student info
+  useEffect(() => {
+    if (user) {
+      loadStudentInfo();
+    }
+  }, [user]);
+
+  const loadStudentInfo = async () => {
+    try {
+      setLoadingStudentInfo(true);
+      const info = await scheduleService.getStudentInfo();
+      setStudentInfo(info);
+    } catch (error) {
+      console.error('[SettingsScreen] Error loading student info:', error);
+    } finally {
+      setLoadingStudentInfo(false);
+    }
+  };
+
+  const formatStudentName = () => {
+    if (!studentInfo) return user?.fullname || user?.username || user?.email || 'Sinh viên';
+    return `${studentInfo.QLSV_NGUOIHOC_HODEM} ${studentInfo.QLSV_NGUOIHOC_TEN}`;
+  };
+
+  const getStudentId = () => {
+    return studentInfo?.QLSV_NGUOIHOC_MASO || user?.username || 'N/A';
+  };
+
+  const getStudentClass = () => {
+    if (!studentInfo) return 'Sinh viên';
+    return `${studentInfo.DAOTAO_LOPQUANLY_TEN} - ${studentInfo.DAOTAO_KHOAQUANLY_TEN}`;
+  };
 
   // Load session time
   useEffect(() => {
@@ -211,7 +247,7 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
               ) : (
                 <View style={styles.avatarPlaceholder}>
                   <Text style={styles.avatarText}>
-                    {user?.fullname?.charAt(0) || 'U'}
+                    {formatStudentName().charAt(0).toUpperCase()}
                   </Text>
                 </View>
               )}
@@ -274,56 +310,88 @@ const SettingsScreen: React.FC<SettingsScreenProps> = ({ navigation }) => {
         {/* Account Info Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Thông tin tài khoản</Text>
-          <View style={styles.infoCard}>
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <MaterialIcons name="person" size={20} color="#3B82F6" />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Họ và tên</Text>
-                <Text style={styles.infoValue}>{user.fullname || 'Chưa cập nhật'}</Text>
+          {loadingStudentInfo ? (
+            <View style={styles.infoCard}>
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#3B82F6" />
+                <Text style={styles.loadingText}>Đang tải thông tin...</Text>
               </View>
             </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <MaterialIcons name="email" size={20} color="#8B5CF6" />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Email</Text>
-                <Text style={styles.infoValue}>{user.email}</Text>
-              </View>
-            </View>
-
-            <View style={styles.divider} />
-
-            <View style={styles.infoRow}>
-              <View style={styles.infoIconContainer}>
-                <MaterialIcons name="badge" size={20} color="#10B981" />
-              </View>
-              <View style={styles.infoContent}>
-                <Text style={styles.infoLabel}>Username</Text>
-                <Text style={styles.infoValue}>{user.username}</Text>
-              </View>
-            </View>
-
-            {user.user_tile && (
-              <>
-                <View style={styles.divider} />
-                <View style={styles.infoRow}>
-                  <View style={styles.infoIconContainer}>
-                    <MaterialIcons name="verified" size={20} color="#F59E0B" />
-                  </View>
-                  <View style={styles.infoContent}>
-                    <Text style={styles.infoLabel}>Vai trò</Text>
-                    <Text style={styles.infoValue}>{user.user_tile}</Text>
-                  </View>
+          ) : (
+            <View style={styles.infoCard}>
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconContainer}>
+                  <MaterialIcons name="person" size={20} color="#3B82F6" />
                 </View>
-              </>
-            )}
-          </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Họ và tên</Text>
+                  <Text style={styles.infoValue}>{formatStudentName()}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconContainer}>
+                  <MaterialIcons name="badge" size={20} color="#10B981" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Mã số sinh viên</Text>
+                  <Text style={styles.infoValue}>{getStudentId()}</Text>
+                </View>
+              </View>
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconContainer}>
+                  <MaterialIcons name="school" size={20} color="#8B5CF6" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Lớp - Khoa</Text>
+                  <Text style={styles.infoValue}>{getStudentClass()}</Text>
+                </View>
+              </View>
+
+              {studentInfo && (
+                <>
+                  <View style={styles.divider} />
+                  <View style={styles.infoRow}>
+                    <View style={styles.infoIconContainer}>
+                      <MaterialIcons name="menu-book" size={20} color="#F59E0B" />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Chương trình đào tạo</Text>
+                      <Text style={styles.infoValue}>{studentInfo.DAOTAO_CHUONGTRINH_TEN}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.divider} />
+                  <View style={styles.infoRow}>
+                    <View style={styles.infoIconContainer}>
+                      <MaterialIcons name="info" size={20} color="#6366F1" />
+                    </View>
+                    <View style={styles.infoContent}>
+                      <Text style={styles.infoLabel}>Trạng thái</Text>
+                      <Text style={styles.infoValue}>{studentInfo.QLSV_TRANGTHAINGUOIHOC_TEN}</Text>
+                    </View>
+                  </View>
+                </>
+              )}
+
+              <View style={styles.divider} />
+
+              <View style={styles.infoRow}>
+                <View style={styles.infoIconContainer}>
+                  <MaterialIcons name="email" size={20} color="#EF4444" />
+                </View>
+                <View style={styles.infoContent}>
+                  <Text style={styles.infoLabel}>Email đăng nhập</Text>
+                  <Text style={styles.infoValue}>{user?.email || 'N/A'}</Text>
+                </View>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Permissions Section */}
@@ -700,6 +768,17 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#9CA3AF',
     textAlign: 'right',
+  },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginLeft: 8,
   },
   footer: {
     backgroundColor: '#FFFFFF',

@@ -16,31 +16,41 @@ import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// WebView approach (working with Expo Go)
+import { MicrosoftSSOWebView } from '../components/MicrosoftSSOWebView';
+import { microsoftSSOService, MicrosoftUserInfo } from '../services/microsoftSSOService';
+import { GoogleSSOWebView } from '../components/GoogleSSOWebView';
+import { googleSSOService, GoogleUserInfo } from '../services/googleSSOService';
+
+// Native SDK approach (requires rebuild)
+// import { microsoftNativeService, MicrosoftUser } from '../services/microsoftNativeService';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [rememberEmail, setRememberEmail] = useState(false);
+  const [rememberAccount, setRememberAccount] = useState(false);
+  const [showMicrosoftSSO, setShowMicrosoftSSO] = useState(false); // WebView
+  const [showGoogleSSO, setShowGoogleSSO] = useState(false); // WebView
   const { login, isLoading: isLoginLoading } = useAuth();
   const navigation = useNavigation();
   const isLoading = isLoginLoading;
 
-  // Load email đã lưu (nếu có) khi mở màn
+  // Load mã sinh viên/email đã lưu (nếu có) khi mở màn
   useEffect(() => {
-    const loadRememberedEmail = async () => {
+    const loadRememberedAccount = async () => {
       try {
-        const stored = await AsyncStorage.getItem('remembered_email');
+        const stored = await AsyncStorage.getItem('remembered_account');
         if (stored) {
           setEmail(stored);
-          setRememberEmail(true);
+          setRememberAccount(true);
         }
       } catch {
         // ignore
       }
     };
-    loadRememberedEmail();
+    loadRememberedAccount();
   }, []);
 
   const handleLogin = async () => {
@@ -52,21 +62,21 @@ const LoginScreen = () => {
     setErrorMessage('');
     
     if (!email || !password) {
-      console.warn('[LoginScreen] ⚠️ Email hoặc password trống');
-      setErrorMessage('Vui lòng nhập đầy đủ email và mật khẩu');
-      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ email và mật khẩu');
+      console.warn('[LoginScreen] ⚠️ Mã sinh viên/email hoặc password trống');
+      setErrorMessage('Vui lòng nhập đầy đủ mã sinh viên/email và mật khẩu');
+      Alert.alert('Lỗi', 'Vui lòng nhập đầy đủ mã sinh viên/email và mật khẩu');
       return;
     }
 
     try {
       // console.log('[LoginScreen] 📝 Gọi login từ AuthContext...');
       await login(email, password);
-      // Lưu hoặc xoá email tuỳ theo lựa chọn
+      // Lưu hoặc xoá mã sinh viên/email tuỳ theo lựa chọn
       try {
-        if (rememberEmail) {
-          await AsyncStorage.setItem('remembered_email', email);
+        if (rememberAccount) {
+          await AsyncStorage.setItem('remembered_account', email);
         } else {
-          await AsyncStorage.removeItem('remembered_email');
+          await AsyncStorage.removeItem('remembered_account');
         }
       } catch {}
       // console.log('[LoginScreen] ✅ Login thành công! Navigation sẽ tự động xử lý.');
@@ -78,9 +88,158 @@ const LoginScreen = () => {
     }
   };
 
-  const handleAzureLogin = async () => {
-    // Chuyển sang màn hình WebView SSO, nơi web sẽ xử lý Azure SSO và trả token về app
-    navigation.navigate('SSOLogin' as never);
+  // Handle Microsoft SSO - WebView (works with Expo Go)
+  const handleMicrosoftLogin = () => {
+    console.log('[LoginScreen] 🔐 Microsoft SSO button clicked');
+    setShowMicrosoftSSO(true);
+  };
+
+  const handleMicrosoftSSOSuccess = async (userInfo: MicrosoftUserInfo) => {
+    console.log('[LoginScreen] ✅ Microsoft SSO Success:', userInfo);
+    
+    setShowMicrosoftSSO(false);
+
+    try {
+      // Lấy access token
+      const accessToken = await microsoftSSOService.getAccessToken();
+      
+      if (!accessToken) {
+        throw new Error('Không thể lấy access token');
+      }
+
+      // TODO: Gửi token lên backend để tạo session
+      // Tạm thời hiển thị thông báo thành công
+      Alert.alert(
+        'Đăng nhập thành công',
+        `Chào mừng ${userInfo.name}!\n\nEmail: ${userInfo.email}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // TODO: Navigate to home screen hoặc call backend API
+              console.log('[LoginScreen] User info:', userInfo);
+              console.log('[LoginScreen] Access token:', accessToken);
+            },
+          },
+        ]
+      );
+
+      // TODO: Uncomment khi backend ready
+      /*
+      const response = await fetch('https://iu.cmcu.edu.vn/cmsapi/api/auth/microsoft-sso', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          access_token: accessToken,
+          email: userInfo.email,
+          name: userInfo.name,
+          oid: userInfo.oid,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Login thành công, navigate to home
+        // Navigation sẽ được xử lý tự động bởi AuthContext
+      } else {
+        throw new Error(data.message || 'Đăng nhập thất bại');
+      }
+      */
+    } catch (error: any) {
+      console.error('[LoginScreen] ❌ Microsoft SSO backend error:', error);
+      Alert.alert('Lỗi', error.message || 'Không thể kết nối với server');
+    }
+  };
+
+  const handleMicrosoftSSOError = (error: Error) => {
+    console.error('[LoginScreen] ❌ Microsoft SSO Error:', error);
+    setShowMicrosoftSSO(false);
+    Alert.alert('Lỗi đăng nhập Microsoft', error.message);
+  };
+
+  const handleMicrosoftSSOCancel = () => {
+    console.log('[LoginScreen] ⚠️ User cancelled Microsoft SSO');
+    setShowMicrosoftSSO(false);
+  };
+
+  // Handle Google SSO - WebView (works with Expo Go)
+  const handleGoogleLogin = () => {
+    console.log('[LoginScreen] 🔐 Google SSO button clicked');
+    setShowGoogleSSO(true);
+  };
+
+  const handleGoogleSSOSuccess = async (userInfo: GoogleUserInfo) => {
+    console.log('[LoginScreen] ✅ Google SSO Success:', userInfo);
+    
+    setShowGoogleSSO(false);
+
+    try {
+      // Lấy access token
+      const accessToken = await googleSSOService.getAccessToken();
+      
+      if (!accessToken) {
+        throw new Error('Không thể lấy access token');
+      }
+
+      // TODO: Gửi token lên backend để tạo session
+      // Tạm thời hiển thị thông báo thành công
+      Alert.alert(
+        'Đăng nhập thành công',
+        `Chào mừng ${userInfo.name}!\n\nEmail: ${userInfo.email}`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // TODO: Navigate to home screen hoặc call backend API
+              console.log('[LoginScreen] User info:', userInfo);
+              console.log('[LoginScreen] Access token:', accessToken);
+            },
+          },
+        ]
+      );
+
+      // TODO: Uncomment khi backend ready
+      /*
+      const response = await fetch('https://iu.cmcu.edu.vn/cmsapi/api/auth/google-sso', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          access_token: accessToken,
+          email: userInfo.email,
+          name: userInfo.name,
+          sub: userInfo.sub,
+        }),
+      });
+
+      const data = await response.json();
+      
+      if (data.success) {
+        // Login thành công, navigate to home
+        // Navigation sẽ được xử lý tự động bởi AuthContext
+      } else {
+        throw new Error(data.message || 'Đăng nhập thất bại');
+      }
+      */
+    } catch (error: any) {
+      console.error('[LoginScreen] ❌ Google SSO backend error:', error);
+      Alert.alert('Lỗi', error.message || 'Không thể kết nối với server');
+    }
+  };
+
+  const handleGoogleSSOError = (error: Error) => {
+    console.error('[LoginScreen] ❌ Google SSO Error:', error);
+    setShowGoogleSSO(false);
+    Alert.alert('Lỗi đăng nhập Google', error.message);
+  };
+
+  const handleGoogleSSOCancel = () => {
+    console.log('[LoginScreen] ⚠️ User cancelled Google SSO');
+    setShowGoogleSSO(false);
   };
 
   return (
@@ -114,33 +273,33 @@ const LoginScreen = () => {
                 end={{ x: 1, y: 1 }}
                 style={styles.logoGradient}
               >
-                <MaterialCommunityIcons name="chat-processing" size={34} color="#FFFFFF" />
+                <MaterialCommunityIcons name="school" size={34} color="#FFFFFF" />
               </LinearGradient>
             </View>
             <View style={styles.badgeRow}>
               <View style={styles.brandBadge}>
-                <Text style={styles.brandBadgeText}>AI Agent Mobile</Text>
+                <Text style={styles.brandBadgeText}>Cổng Thông Tin</Text>
               </View>
               <View style={styles.brandBadgeSecondary}>
-                <MaterialIcons name="verified" size={14} color="#10B981" />
-                <Text style={styles.brandBadgeSecondaryText}>Enterprise</Text>
+                <MaterialIcons name="school" size={14} color="#10B981" />
+                <Text style={styles.brandBadgeSecondaryText}>Sinh Viên</Text>
               </View>
             </View>
-            <Text style={styles.title}>Social Media CRM</Text>
-            <Text style={styles.subtitle}>Hệ thống AI quản trị mạng xã hội đa kênh</Text>
+            <Text style={styles.title}>Trường Đại Học</Text>
+            <Text style={styles.subtitle}>Hệ thống quản lý thông tin sinh viên và học tập</Text>
 
             <View style={styles.metricsRow}>
               <View style={styles.metricPill}>
                 <MaterialCommunityIcons name="shield-lock-outline" size={16} color="#10B981" />
-                <Text style={styles.metricText}>Bảo mật JWT</Text>
+                <Text style={styles.metricText}>Bảo mật cao</Text>
               </View>
               <View style={styles.metricPill}>
-                <MaterialCommunityIcons name="rocket-launch" size={16} color="#F59E0B" />
-                <Text style={styles.metricText}>Tốc độ cao</Text>
+                <MaterialCommunityIcons name="book-open-variant" size={16} color="#F59E0B" />
+                <Text style={styles.metricText}>Học tập</Text>
               </View>
               <View style={styles.metricPill}>
-                <MaterialCommunityIcons name="microsoft-azure" size={16} color="#2563EB" />
-                <Text style={styles.metricText}>Azure SSO</Text>
+                <MaterialCommunityIcons name="account-group" size={16} color="#2563EB" />
+                <Text style={styles.metricText}>Sinh viên</Text>
               </View>
             </View>
           </View>
@@ -163,12 +322,12 @@ const LoginScreen = () => {
 
             {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Text style={styles.label}>Email</Text>
+              <Text style={styles.label}>Mã sinh viên / Email</Text>
               <View style={styles.inputWrapper}>
-                <MaterialIcons name="email" size={20} color="#6B7280" style={styles.inputIcon} />
+                <MaterialIcons name="person" size={20} color="#6B7280" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
-                  placeholder="Nhập địa chỉ email"
+                  placeholder="Nhập mã sinh viên hoặc email"
                   placeholderTextColor="#9CA3AF"
                   value={email}
                   onChangeText={(text) => {
@@ -215,24 +374,24 @@ const LoginScreen = () => {
               </View>
             </View>
 
-            {/* Remember email + Forgot Password */}
+            {/* Remember account + Forgot Password */}
             <View style={styles.rememberRow}>
               <TouchableOpacity
                 style={styles.rememberToggle}
-                onPress={() => setRememberEmail(!rememberEmail)}
+                onPress={() => setRememberAccount(!rememberAccount)}
                 disabled={isLoading}
               >
                 <View
                   style={[
                     styles.rememberCheckbox,
-                    rememberEmail && styles.rememberCheckboxActive,
+                    rememberAccount && styles.rememberCheckboxActive,
                   ]}
                 >
-                  {rememberEmail && (
+                  {rememberAccount && (
                     <MaterialIcons name="check" size={14} color="#FFFFFF" />
                   )}
                 </View>
-                <Text style={styles.rememberLabel}>Ghi nhớ email</Text>
+                <Text style={styles.rememberLabel}>Ghi nhớ tài khoản</Text>
               </TouchableOpacity>
 
               <TouchableOpacity style={styles.forgotPassword}>
@@ -267,26 +426,59 @@ const LoginScreen = () => {
               <View style={styles.dividerLine} />
             </View>
 
-            {/* SSO Button */}
-            <TouchableOpacity 
-              style={styles.ssoButton} 
-              disabled={isLoading}
-              onPress={handleAzureLogin}
-            >
-              <MaterialCommunityIcons name="microsoft-azure" size={20} color="#374151" style={styles.ssoIcon} />
-              <Text style={styles.ssoButtonText}>Đăng nhập với Azure AD</Text>
-            </TouchableOpacity>
+            {/* Social Login Buttons */}
+            <View style={styles.socialButtonsContainer}>
+              {/* Google Login Button */}
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={handleGoogleLogin}
+                disabled={isLoading}
+              >
+                <View style={styles.socialButtonContent}>
+                  <MaterialCommunityIcons name="google" size={20} color="#DB4437" />
+                  <Text style={styles.socialButtonText}>Google</Text>
+                </View>
+              </TouchableOpacity>
+
+              {/* Microsoft Login Button */}
+              <TouchableOpacity
+                style={styles.socialButton}
+                onPress={handleMicrosoftLogin}
+                disabled={isLoading}
+              >
+                <View style={styles.socialButtonContent}>
+                  <MaterialCommunityIcons name="microsoft" size={20} color="#0078D4" />
+                  <Text style={styles.socialButtonText}>Microsoft</Text>
+                </View>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Footer */}
           <View style={styles.footer}>
             <Text style={styles.footerText}>
               Bạn chưa có tài khoản?{' '}
-              <Text style={styles.footerLink}>Liên hệ quản trị viên</Text>
+              <Text style={styles.footerLink}>Liên hệ phòng đào tạo</Text>
             </Text>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Microsoft SSO WebView Modal */}
+      <MicrosoftSSOWebView
+        visible={showMicrosoftSSO}
+        onSuccess={handleMicrosoftSSOSuccess}
+        onError={handleMicrosoftSSOError}
+        onCancel={handleMicrosoftSSOCancel}
+      />
+
+      {/* Google SSO WebView Modal */}
+      <GoogleSSOWebView
+        visible={showGoogleSSO}
+        onSuccess={handleGoogleSSOSuccess}
+        onError={handleGoogleSSOError}
+        onCancel={handleGoogleSSOCancel}
+      />
     </View>
   );
 };
@@ -595,28 +787,36 @@ const styles = StyleSheet.create({
     color: '#6B7280',
     fontWeight: '600',
   },
-  ssoButton: {
+  socialButtonsContainer: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F9FAFB',
+    gap: 12,
+    marginBottom: 8,
+  },
+  socialButton: {
+    flex: 1,
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  socialButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     paddingVertical: 14,
-    shadowColor: '#0f172a',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
-    elevation: 3,
+    paddingHorizontal: 16,
+    gap: 12,
   },
-  ssoIcon: {
-    marginRight: 10,
-  },
-  ssoButtonText: {
+  socialButtonText: {
     fontSize: 15,
-    fontWeight: '700',
-    color: '#1F2937',
+    fontWeight: '600',
+    color: '#374151',
   },
   footer: {
     marginTop: 24,

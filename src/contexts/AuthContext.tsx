@@ -11,7 +11,6 @@ interface AuthContextType {
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   updateUserLocal: (data: Partial<User>) => Promise<void>;
-  completeSsoLogin: (profile: User) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -86,18 +85,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             text: 'Tiếp tục ca làm việc',
             onPress: async () => {
               try {
-                const res = await authService.refreshToken();
-                if (res?.access_token) {
-                  const raw = await AsyncStorage.getItem(SESSION_EXPIRES_AT_KEY);
-                  if (raw) {
-                    const next = new Date(raw);
-                    if (!isNaN(next.getTime())) {
-                      scheduleSessionTimers(next);
-                      return;
-                    }
-                  }
-                }
-                // Nếu không gia hạn được thì logout để tránh trạng thái lệch
                 logout();
               } catch (err: any) {
                 console.error('[AuthContext] ❌ Gia hạn phiên thất bại:', err.message);
@@ -122,19 +109,15 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const isAuth = await authService.isAuthenticated();
       
       if (isAuth) {
-        // Thử lấy user từ cache trước
-        const cachedUser = await authService.getCachedUser();
-        if (cachedUser) {
-          setUser(cachedUser);
-        }
-        
-        // Sau đó fetch profile mới từ server
+        // Lấy profile mới từ server (không dùng cache để tránh hiển thị thông tin cũ)
         try {
           const profile = await authService.getProfile();
           setUser(profile);
         } catch (profileError) {
           console.error('Error fetching profile:', profileError);
-          // Nếu lỗi, vẫn giữ cached user
+          // Nếu lỗi lấy profile, đăng xuất để tránh trạng thái không nhất quán
+          await authService.logout();
+          setUser(null);
         }
 
         // Thiết lập timers dựa trên thời gian hết hạn đã lưu
@@ -170,15 +153,45 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       setIsLoading(true);
       setError(null);
 
+      // XÓA TOÀN BỘ dữ liệu cũ trước khi đăng nhập để tránh hiển thị thông tin cũ
+      console.log('[AuthContext] 🗑️ Xóa TOÀN BỘ dữ liệu cũ trước khi đăng nhập...');
+      setUser(null);
+      clearSessionTimers();
+      
+      // Xóa cache của các service
+      try {
+        const { scheduleService } = await import('../services/scheduleService');
+        await scheduleService.clearCache();
+        console.log('[AuthContext] ✅ Đã xóa cache của scheduleService trước khi login');
+      } catch (err) {
+        console.warn('[AuthContext] ⚠️ Không thể xóa schedule cache trước khi login:', err);
+      }
+      
+      try {
+        const { financeService } = await import('../services/financeService');
+        financeService.clearCache();
+        console.log('[AuthContext] ✅ Đã xóa cache của financeService trước khi login');
+      } catch (err) {
+        console.warn('[AuthContext] ⚠️ Không thể xóa finance cache trước khi login:', err);
+      }
+      
+      try {
+        const { examService } = await import('../services/examService');
+        examService.clearCache();
+        console.log('[AuthContext] ✅ Đã xóa cache của examService trước khi login');
+      } catch (err) {
+        console.warn('[AuthContext] ⚠️ Không thể xóa exam cache trước khi login:', err);
+      }
+
       // Đăng nhập
       console.log('[AuthContext] 📝 Gọi authService.login...');
       await authService.login(email, password);
       console.log('[AuthContext] ✅ Login service hoàn thành');
 
-      // Lấy thông tin profile
+      // Lấy thông tin profile MỚI
       console.log('[AuthContext] 📝 Gọi authService.getProfile...');
       const profile = await authService.getProfile();
-      console.log('[AuthContext] ✅ GetProfile hoàn thành');
+      console.log('[AuthContext] ✅ GetProfile hoàn thành - User:', profile.fullname);
       
       setUser(profile);
       console.log('[AuthContext] 🎉 Login flow hoàn thành! User đã được set.');
@@ -204,61 +217,58 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
-  const completeSsoLogin = async (profile: User) => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      setUser(profile);
-
-      try {
-        const raw = await AsyncStorage.getItem(SESSION_EXPIRES_AT_KEY);
-        if (raw) {
-          const expires = new Date(raw);
-          if (!isNaN(expires.getTime())) {
-            scheduleSessionTimers(expires);
-          }
-        }
-      } catch {}
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const logout = async () => {
     try {
       console.log('='.repeat(60));
-      console.log('[AuthContext] 🚪 LOGOUT FUNCTION ĐƯỢC GỌI');
-      console.log('[AuthContext] 📊 Current user:', user?.email);
-      console.log('[AuthContext] 📊 Current isAuthenticated:', !!user);
+      console.log('[AuthContext] 🚪 LOGOUT - Xóa TOÀN BỘ dữ liệu');
+      console.log('[AuthContext] 📊 Current user:', user?.fullname);
       
-      // Không set loading = true để không block UI
-      // setIsLoading(true);
-      
-      // Clear user state ngay lập tức để trigger navigation
-      console.log('[AuthContext] 📍 Bước 1: Clear user state...');
+      // Clear timers và user state ngay lập tức
+      console.log('[AuthContext] 📍 Bước 1: Clear timers và user state...');
       clearSessionTimers();
       setUser(null);
-      console.log('[AuthContext] ✅ setUser(null) đã được gọi');
-      console.log('[AuthContext] 📊 New isAuthenticated should be:', false);
+      setError(null);
+      setSessionExpiresAt(null);
+      console.log('[AuthContext] ✅ State đã được reset');
       
-      // Gọi API logout ở background (không chờ)
-      console.log('[AuthContext] 📍 Bước 2: Gọi authService.logout() background...');
-      authService.logout()
-        .then(() => {
-          console.log('[AuthContext] ✅ API logout thành công');
-        })
-        .catch((err) => {
-          console.error('[AuthContext] ⚠️ API logout lỗi (đã clear local):', err);
-        });
+      // Clear TẤT CẢ dữ liệu local (bao gồm cache của schedule, finance, exam, etc.)
+      console.log('[AuthContext] 📍 Bước 2: Clear TOÀN BỘ local data và cache...');
+      await authService.logout();
       
-      console.log('[AuthContext] 🎉 Đăng xuất thành công!');
-      console.log('[AuthContext] 🔄 Navigation should trigger now...');
+      // Import và clear cache của các service khác
+      try {
+        const { scheduleService } = await import('../services/scheduleService');
+        await scheduleService.clearCache();
+        console.log('[AuthContext] ✅ Đã xóa cache của scheduleService');
+      } catch (err) {
+        console.warn('[AuthContext] ⚠️ Không thể xóa cache của scheduleService:', err);
+      }
+      
+      try {
+        const { financeService } = await import('../services/financeService');
+        financeService.clearCache();
+        console.log('[AuthContext] ✅ Đã xóa cache của financeService');
+      } catch (err) {
+        console.warn('[AuthContext] ⚠️ Không thể xóa cache của financeService:', err);
+      }
+      
+      try {
+        const { examService } = await import('../services/examService');
+        examService.clearCache();
+        console.log('[AuthContext] ✅ Đã xóa cache của examService');
+      } catch (err) {
+        console.warn('[AuthContext] ⚠️ Không thể xóa cache của examService:', err);
+      }
+      
+      console.log('[AuthContext] 🎉 Đăng xuất hoàn tất! Tất cả dữ liệu đã được xóa.');
+      console.log('[AuthContext] 🔄 Navigation sẽ chuyển về màn hình đăng nhập...');
       console.log('='.repeat(60));
     } catch (err) {
       console.error('[AuthContext] ❌ Lỗi đăng xuất:', err);
-      console.error('[AuthContext] ❌ Error details:', err);
       // Vẫn clear user state ngay cả khi có lỗi
       setUser(null);
+      setError(null);
+      setSessionExpiresAt(null);
     }
   };
 
@@ -272,7 +282,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         logout,
         isAuthenticated: !!user,
         updateUserLocal,
-        completeSsoLogin,
       }}
     >
       {children}

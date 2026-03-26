@@ -14,6 +14,7 @@ import {
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useAuth } from '../contexts/AuthContext';
+import { scheduleService, StudentInfo } from '../services/scheduleService';
 import CustomAlert from './CustomAlert';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -30,6 +31,28 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) => {
   const [confirmVisible, setConfirmVisible] = useState(false);
   const [remainingSession, setRemainingSession] = useState<string | null>(null);
   const [remainingPercent, setRemainingPercent] = useState<number>(1);
+  const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
+
+  // Load student info when modal opens
+  useEffect(() => {
+    if (visible && user) {
+      loadStudentInfo();
+    }
+  }, [visible, user]);
+
+  const loadStudentInfo = async () => {
+    try {
+      const info = await scheduleService.getStudentInfo();
+      setStudentInfo(info);
+    } catch (error) {
+      console.error('[ProfileModal] Error loading student info:', error);
+    }
+  };
+
+  const formatStudentName = () => {
+    if (!studentInfo) return user?.fullname || user?.username || user?.email || 'Sinh viên';
+    return `${studentInfo.QLSV_NGUOIHOC_HODEM} ${studentInfo.QLSV_NGUOIHOC_TEN}`;
+  };
 
   useEffect(() => {
     let interval: any = null;
@@ -178,13 +201,13 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ visible, onClose }) => {
               ) : (
                 <View style={styles.avatarCircle}>
                   <Text style={styles.avatarText}>
-                    {user?.fullname?.charAt(0) || 'U'}
+                    {formatStudentName().charAt(0).toUpperCase()}
                   </Text>
                 </View>
               )}
             </View>
             
-            <Text style={styles.userName}>{user?.fullname || 'User'}</Text>
+            <Text style={styles.userName}>{formatStudentName()}</Text>
             <Text style={styles.userEmail}>{user?.email}</Text>
           </View>
 
