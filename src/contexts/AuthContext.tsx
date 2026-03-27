@@ -149,12 +149,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string) => {
     try {
-      console.log('[AuthContext] 🚀 Bắt đầu login flow...');
+      // console.log('[AuthContext] 🚀 Bắt đầu login flow...');
       setIsLoading(true);
       setError(null);
 
       // XÓA TOÀN BỘ dữ liệu cũ trước khi đăng nhập để tránh hiển thị thông tin cũ
-      console.log('[AuthContext] 🗑️ Xóa TOÀN BỘ dữ liệu cũ trước khi đăng nhập...');
+      // console.log('[AuthContext] 🗑️ Xóa TOÀN BỘ dữ liệu cũ trước khi đăng nhập...');
       setUser(null);
       clearSessionTimers();
       
@@ -162,7 +162,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const { scheduleService } = await import('../services/scheduleService');
         await scheduleService.clearCache();
-        console.log('[AuthContext] ✅ Đã xóa cache của scheduleService trước khi login');
+        // console.log('[AuthContext] ✅ Đã xóa cache của scheduleService trước khi login');
       } catch (err) {
         console.warn('[AuthContext] ⚠️ Không thể xóa schedule cache trước khi login:', err);
       }
@@ -170,7 +170,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const { financeService } = await import('../services/financeService');
         financeService.clearCache();
-        console.log('[AuthContext] ✅ Đã xóa cache của financeService trước khi login');
+        // console.log('[AuthContext] ✅ Đã xóa cache của financeService trước khi login');
       } catch (err) {
         console.warn('[AuthContext] ⚠️ Không thể xóa finance cache trước khi login:', err);
       }
@@ -178,23 +178,23 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const { examService } = await import('../services/examService');
         examService.clearCache();
-        console.log('[AuthContext] ✅ Đã xóa cache của examService trước khi login');
+        // console.log('[AuthContext] ✅ Đã xóa cache của examService trước khi login');
       } catch (err) {
         console.warn('[AuthContext] ⚠️ Không thể xóa exam cache trước khi login:', err);
       }
 
       // Đăng nhập
-      console.log('[AuthContext] 📝 Gọi authService.login...');
+      // console.log('[AuthContext] 📝 Gọi authService.login...');
       await authService.login(email, password);
-      console.log('[AuthContext] ✅ Login service hoàn thành');
+      // console.log('[AuthContext] ✅ Login service hoàn thành');
 
       // Lấy thông tin profile MỚI
-      console.log('[AuthContext] 📝 Gọi authService.getProfile...');
+      // console.log('[AuthContext] 📝 Gọi authService.getProfile...');
       const profile = await authService.getProfile();
-      console.log('[AuthContext] ✅ GetProfile hoàn thành - User:', profile.fullname);
+      // console.log('[AuthContext] ✅ GetProfile hoàn thành - User:', profile.fullname);
       
       setUser(profile);
-      console.log('[AuthContext] 🎉 Login flow hoàn thành! User đã được set.');
+      // console.log('[AuthContext] 🎉 Login flow hoàn thành! User đã được set.');
 
       // Thiết lập timers cho phiên làm việc mới
       try {
@@ -219,27 +219,27 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = async () => {
     try {
-      console.log('='.repeat(60));
-      console.log('[AuthContext] 🚪 LOGOUT - Xóa TOÀN BỘ dữ liệu');
-      console.log('[AuthContext] 📊 Current user:', user?.fullname);
+      // console.log('='.repeat(60));
+      // console.log('[AuthContext] 🚪 LOGOUT - Xóa TOÀN BỘ dữ liệu');
+      // console.log('[AuthContext] 📊 Current user:', user?.fullname);
       
       // Clear timers và user state ngay lập tức
-      console.log('[AuthContext] 📍 Bước 1: Clear timers và user state...');
+      // console.log('[AuthContext] 📍 Bước 1: Clear timers và user state...');
       clearSessionTimers();
       setUser(null);
       setError(null);
       setSessionExpiresAt(null);
-      console.log('[AuthContext] ✅ State đã được reset');
+      // console.log('[AuthContext] ✅ State đã được reset');
       
       // Clear TẤT CẢ dữ liệu local (bao gồm cache của schedule, finance, exam, etc.)
-      console.log('[AuthContext] 📍 Bước 2: Clear TOÀN BỘ local data và cache...');
+      // console.log('[AuthContext] 📍 Bước 2: Clear TOÀN BỘ local data và cache...');
       await authService.logout();
       
       // Import và clear cache của các service khác
       try {
         const { scheduleService } = await import('../services/scheduleService');
         await scheduleService.clearCache();
-        console.log('[AuthContext] ✅ Đã xóa cache của scheduleService');
+        // console.log('[AuthContext] ✅ Đã xóa cache của scheduleService');
       } catch (err) {
         console.warn('[AuthContext] ⚠️ Không thể xóa cache của scheduleService:', err);
       }
@@ -247,7 +247,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const { financeService } = await import('../services/financeService');
         financeService.clearCache();
-        console.log('[AuthContext] ✅ Đã xóa cache của financeService');
+        // console.log('[AuthContext] ✅ Đã xóa cache của financeService');
       } catch (err) {
         console.warn('[AuthContext] ⚠️ Không thể xóa cache của financeService:', err);
       }
@@ -255,14 +255,22 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       try {
         const { examService } = await import('../services/examService');
         examService.clearCache();
-        console.log('[AuthContext] ✅ Đã xóa cache của examService');
+        // console.log('[AuthContext] ✅ Đã xóa cache của examService');
       } catch (err) {
         console.warn('[AuthContext] ⚠️ Không thể xóa cache của examService:', err);
       }
       
-      console.log('[AuthContext] 🎉 Đăng xuất hoàn tất! Tất cả dữ liệu đã được xóa.');
-      console.log('[AuthContext] 🔄 Navigation sẽ chuyển về màn hình đăng nhập...');
-      console.log('='.repeat(60));
+      try {
+        const { newsService } = await import('../services/newsService');
+        await newsService.clearCache();
+        // console.log('[AuthContext] ✅ Đã xóa cache của newsService');
+      } catch (err) {
+        console.warn('[AuthContext] ⚠️ Không thể xóa cache của newsService:', err);
+      }
+      
+      // console.log('[AuthContext] 🎉 Đăng xuất hoàn tất! Tất cả dữ liệu đã được xóa.');
+      // console.log('[AuthContext] 🔄 Navigation sẽ chuyển về màn hình đăng nhập...');
+      // console.log('='.repeat(60));
     } catch (err) {
       console.error('[AuthContext] ❌ Lỗi đăng xuất:', err);
       // Vẫn clear user state ngay cả khi có lỗi

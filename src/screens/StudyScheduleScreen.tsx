@@ -415,6 +415,20 @@ const StudyScheduleScreen = () => {
                           <Text style={styles.examBlockBadgeText}>THI</Text>
                         </View>
                       )}
+                      
+                      {/* Badge Chuyên cần */}
+                      {schedule.THONGTINCHUYENCAN && (() => {
+                        const attendanceStatus = scheduleService.getAttendanceStatus(schedule.THONGTINCHUYENCAN);
+                        return (
+                          <View style={[styles.attendanceBadge, { backgroundColor: attendanceStatus.color }]}>
+                            <MaterialIcons 
+                              name={attendanceStatus.icon as any} 
+                              size={12} 
+                              color="#FFFFFF" 
+                            />
+                          </View>
+                        );
+                      })()}
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -497,11 +511,21 @@ const StudyScheduleScreen = () => {
                   <Text style={styles.modalTime}>
                     {selectedSchedule.THUHOC} - {scheduleService.formatScheduleTime(selectedSchedule)}
                   </Text>
-                  {selectedSchedule.THONGTINCHUYENCAN && (
-                    <Text style={styles.modalAttendance}>
-                      Chuyên cần: {selectedSchedule.THONGTINCHUYENCAN}
-                    </Text>
-                  )}
+                  {selectedSchedule.THONGTINCHUYENCAN && (() => {
+                    const attendanceStatus = scheduleService.getAttendanceStatus(selectedSchedule.THONGTINCHUYENCAN);
+                    return (
+                      <View style={styles.attendanceContainer}>
+                        <MaterialIcons 
+                          name={attendanceStatus.icon as any} 
+                          size={14} 
+                          color={attendanceStatus.color} 
+                        />
+                        <Text style={[styles.modalAttendance, { color: attendanceStatus.color }]}>
+                          {attendanceStatus.label}
+                        </Text>
+                      </View>
+                    );
+                  })()}
                 </View>
                 <TouchableOpacity
                   style={styles.closeButton}
@@ -986,6 +1010,21 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#EF4444',
   },
+  attendanceBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
   // Calendar Modal Styles
   calendarOverlay: {
     flex: 1,
@@ -1196,8 +1235,13 @@ const styles = StyleSheet.create({
   },
   modalAttendance: {
     fontSize: 12,
-    color: '#10B981',
     fontWeight: '500',
+    marginLeft: 4,
+  },
+  attendanceContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 4,
   },
   closeButton: {
     padding: 5,

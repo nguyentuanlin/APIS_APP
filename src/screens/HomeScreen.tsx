@@ -15,6 +15,7 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import CustomDrawer from '../components/CustomDrawer';
+import DashboardShortcuts from '../components/DashboardShortcuts';
 import { scheduleService, ScheduleItem, StudentInfo } from '../services/scheduleService';
 
 const { width } = Dimensions.get('window');
@@ -283,6 +284,19 @@ const HomeScreen = () => {
                       <Text style={styles.examBadgeText}>THI</Text>
                     </View>
                   )}
+                  
+                  {schedule.THONGTINCHUYENCAN && (() => {
+                    const attendanceStatus = scheduleService.getAttendanceStatus(schedule.THONGTINCHUYENCAN);
+                    return (
+                      <View style={[styles.homeAttendanceBadge, { backgroundColor: attendanceStatus.color }]}>
+                        <MaterialIcons 
+                          name={attendanceStatus.icon as any} 
+                          size={10} 
+                          color="#FFFFFF" 
+                        />
+                      </View>
+                    );
+                  })()}
                 </View>
               </TouchableOpacity>
             ))}
@@ -431,6 +445,9 @@ const HomeScreen = () => {
             </View>
           </LinearGradient>
         </View>
+
+        {/* Dashboard Shortcuts */}
+        <DashboardShortcuts navigation={navigation} />
 
         {/* Student Stats */}
         <View style={styles.section}>
@@ -996,6 +1013,21 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: 'bold',
     color: '#FFFFFF',
+  },
+  homeAttendanceBadge: {
+    position: 'absolute',
+    bottom: 8,
+    right: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
   },
   moreScheduleCard: {
     backgroundColor: '#F9FAFB',

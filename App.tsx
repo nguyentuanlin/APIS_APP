@@ -17,6 +17,15 @@
   import ExamScheduleScreen from './src/screens/ExamScheduleScreen';
   import FinanceScreen from './src/screens/FinanceScreen';
   import GradeLookupScreen from './src/screens/GradeLookupScreen';
+  import RegistrationMenuScreen from './src/screens/RegistrationMenuScreen';
+  import ProfileDetailScreen from './src/screens/ProfileDetailScreen';
+  import ViewProfileScreen from './src/screens/ViewProfileScreen';
+  import ConfirmationScreen from './src/screens/ConfirmationScreen';
+  import TrainingScoreScreen from './src/screens/TrainingScoreScreen';
+  import TrainingScoreDetailScreen from './src/screens/TrainingScoreDetailScreen';
+  import CurriculumScreen from './src/screens/CurriculumScreen';
+  import AppealScreen from './src/screens/AppealScreen';
+  import RegistrationResultScreen from './src/screens/RegistrationResultScreen';
   import { ActivityIndicator, View, StyleSheet } from 'react-native';
   const Stack = createNativeStackNavigator();
 
@@ -48,6 +57,15 @@
               <Stack.Screen name="ExamSchedule" component={ExamScheduleScreen} />
               <Stack.Screen name="Finance" component={FinanceScreen} />
               <Stack.Screen name="GradeLookup" component={GradeLookupScreen} />
+              <Stack.Screen name="RegistrationMenu" component={RegistrationMenuScreen} />
+              <Stack.Screen name="ProfileDetail" component={ProfileDetailScreen} />
+              <Stack.Screen name="ViewProfile" component={ViewProfileScreen} />
+              <Stack.Screen name="Confirmation" component={ConfirmationScreen} />
+              <Stack.Screen name="TrainingScore" component={TrainingScoreScreen} />
+              <Stack.Screen name="TrainingScoreDetail" component={TrainingScoreDetailScreen} />
+              <Stack.Screen name="Curriculum" component={CurriculumScreen} />
+              <Stack.Screen name="Appeal" component={AppealScreen} />
+              <Stack.Screen name="RegistrationResult" component={RegistrationResultScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
             </>
           ) : (

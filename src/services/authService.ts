@@ -212,7 +212,7 @@ export const authService = {
         await AsyncStorage.setItem('access_token', accessToken);
         const expiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
         await AsyncStorage.setItem(SESSION_EXPIRES_AT_KEY, expiresAt);
-        console.log('[AuthService] 💾 Đã lưu token và session_expires_at vào AsyncStorage');
+        // console.log('[AuthService] 💾 Đã lưu token và session_expires_at vào AsyncStorage');
       }
 
       if (!accessToken) {

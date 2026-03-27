@@ -421,6 +421,75 @@ class ScheduleService {
   }
 
   /**
+   * Phân loại trạng thái chuyên cần
+   */
+  getAttendanceStatus(thongTinChuyenCan: string | null): {
+    type: 'present' | 'absent' | 'late' | 'excused' | 'unknown';
+    label: string;
+    color: string;
+    icon: string;
+  } {
+    if (!thongTinChuyenCan) {
+      return {
+        type: 'unknown',
+        label: 'Chưa điểm danh',
+        color: '#9CA3AF',
+        icon: 'help-outline',
+      };
+    }
+
+    const text = thongTinChuyenCan.toLowerCase();
+
+    // Có mặt
+    if (text.includes('có mặt') || text.includes('present')) {
+      return {
+        type: 'present',
+        label: thongTinChuyenCan,
+        color: '#10B981', // Green
+        icon: 'check-circle',
+      };
+    }
+
+    // Vắng mặt có phép
+    if (text.includes('vắng') && (text.includes('có phép') || text.includes('phép'))) {
+      return {
+        type: 'excused',
+        label: thongTinChuyenCan,
+        color: '#F59E0B', // Orange
+        icon: 'event-busy',
+      };
+    }
+
+    // Vắng mặt (không phép)
+    if (text.includes('vắng') || text.includes('absent')) {
+      return {
+        type: 'absent',
+        label: thongTinChuyenCan,
+        color: '#EF4444', // Red
+        icon: 'cancel',
+      };
+    }
+
+    // Đi muộn
+    if (text.includes('muộn') || text.includes('late')) {
+      return {
+        type: 'late',
+        label: thongTinChuyenCan,
+        color: '#F59E0B', // Orange
+        icon: 'schedule',
+      };
+    }
+
+    // Trường hợp khác
+    return {
+      type: 'unknown',
+      label: thongTinChuyenCan,
+      color: '#6B7280',
+      icon: 'info',
+    };
+  }
+
+  /**
    * Xóa cache (dùng khi cần refresh dữ liệu hoặc khi logout)
    */
   async clearCache(): Promise<void> {

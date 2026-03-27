@@ -1,362 +1,312 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  Modal,
   View,
-  Text,
-  TextInput,
-  TouchableOpacity,
   StyleSheet,
+  Modal,
+  TouchableOpacity,
+  ScrollView,
   ActivityIndicator,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Animated,
 } from 'react-native';
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
-import { BlurView } from 'expo-blur';
-import { attendanceService, AttendanceDetail } from '../services/attendanceService';
+import { MaterialIcons } from '@expo/vector-icons';
+import { Text } from 'react-native';
+import attendanceService, { AttendanceRecord } from '../services/attendanceService';
 
 interface AttendanceModalProps {
   visible: boolean;
   onClose: () => void;
-  schedule: AttendanceDetail | null;
-  onSuccess?: () => void;
+  lopHocPhanId: string;
+  lopHocPhanTen: string;
 }
 
-export const AttendanceModal: React.FC<AttendanceModalProps> = ({
+const AttendanceModal: React.FC<AttendanceModalProps> = ({
   visible,
   onClose,
-  schedule,
-  onSuccess,
+  lopHocPhanId,
+  lopHocPhanTen,
 }) => {
-  const [keyword, setKeyword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [scaleAnim] = useState(new Animated.Value(0));
+  const [attendanceList, setAttendanceList] = useState<AttendanceRecord[]>([]);
 
-  React.useEffect(() => {
-    if (visible) {
-      Animated.spring(scaleAnim, {
-        toValue: 1,
-        tension: 50,
-        friction: 7,
-        useNativeDriver: true,
-      }).start();
-    } else {
-      scaleAnim.setValue(0);
+  useEffect(() => {
+    if (visible && lopHocPhanId) {
+      loadAttendance();
     }
-  }, [visible]);
+  }, [visible, lopHocPhanId]);
 
-  const handleCheckIn = async () => {
-    if (!schedule) return;
-
-    if (!keyword.trim()) {
-      Alert.alert('Thông báo', 'Vui lòng nhập từ khóa điểm danh');
-      return;
-    }
-
-    // Kiểm tra thời gian
-    const checkTime = attendanceService.canCheckIn(schedule);
-    if (!checkTime.canCheckIn) {
-      Alert.alert('Thông báo', checkTime.message);
-      return;
-    }
-
-    setLoading(true);
+  const loadAttendance = async () => {
     try {
-      const { date, hour, minute } = attendanceService.getCurrentDateTime();
-      
-      await attendanceService.selfCheckIn({
-        scheduleId: schedule.IDSINHVIEN,
-        attendanceListId: schedule.DIEM_DANHSACH_ID || '',
-        date,
-        hour,
-        minute,
-        keyword: keyword.trim(),
-        classId: schedule.IDLICHHOC,
-      });
-
-      Alert.alert('Thành công', 'Điểm danh thành công! 🎉', [
-        {
-          text: 'OK',
-          onPress: () => {
-            setKeyword('');
-            onClose();
-            onSuccess?.();
-          },
-        },
-      ]);
-    } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Điểm danh thất bại');
+      setLoading(true);
+      const data = await attendanceService.getAttendanceRecords(lopHocPhanId);
+      setAttendanceList(data);
+    } catch (error) {
+      console.error('Error loading attendance:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setKeyword('');
-    onClose();
+  const getStatusColor = (status: string) => {
+    if (status.includes('Có mặt')) return '#10B981';
+    if (status.includes('Vắng mặt có phép')) return '#F59E0B';
+    return '#EF4444';
   };
-
-  if (!schedule) return null;
-
-  const timeRange = attendanceService.formatScheduleTime(schedule);
 
   return (
     <Modal
       visible={visible}
-      transparent
-      animationType="fade"
-      onRequestClose={handleClose}
+      animationType="slide"
+      transparent={true}
+      onRequestClose={onClose}
     >
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.overlay}
-      >
-        <TouchableOpacity 
-          style={styles.backdrop} 
-          activeOpacity={1} 
-          onPress={handleClose}
-        />
-        
-        <Animated.View 
-          style={[
-            styles.modalContainer,
-            {
-              transform: [{ scale: scaleAnim }],
-            },
-          ]}
-        >
-          {/* Header với Gradient */}
-          <LinearGradient
-            colors={['#667eea', '#764ba2']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            style={styles.header}
-          >
-            <View style={styles.headerContent}>
-              <View style={styles.headerIcon}>
-                <MaterialIcons name="event-available" size={28} color="#fff" />
-              </View>
-              <Text style={styles.headerTitle}>Điểm danh</Text>
-            </View>
-            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Ionicons name="close-circle" size={32} color="rgba(255,255,255,0.9)" />
-            </TouchableOpacity>
-          </LinearGradient>
-
-          {/* Content */}
-          <View style={styles.content}>
-            {/* Subject Card - Compact */}
-            <View style={styles.subjectCard}>
-              <Text style={styles.subjectName} numberOfLines={2}>
-                {schedule.TENHOCPHAN}
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          {/* Header */}
+          <View style={styles.modalHeader}>
+            <View style={styles.headerLeft}>
+              <MaterialIcons name="fact-check" size={24} color="#3B82F6" />
+              <Text style={styles.modalTitle} numberOfLines={2}>
+                Kết quả điểm danh
               </Text>
-              <View style={styles.timeRow}>
-                <MaterialIcons name="access-time" size={16} color="#667eea" />
-                <Text style={styles.timeText}>{timeRange}</Text>
-                <View style={styles.periodBadge}>
-                  <Text style={styles.periodText}>
-                    Tiết {schedule.TIETBATDAU}-{schedule.TIETKETTHUC}
-                  </Text>
-                </View>
-              </View>
             </View>
-
-            {/* Keyword Input Section */}
-            <View style={styles.inputSection}>
-              <Text style={styles.inputLabel}>
-                <MaterialIcons name="vpn-key" size={16} color="#667eea" /> Từ khóa điểm danh
-              </Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  value={keyword}
-                  onChangeText={setKeyword}
-                  placeholder="Nhập từ khóa..."
-                  placeholderTextColor="#999"
-                  editable={!loading}
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  autoFocus
-                />
-              </View>
-            </View>
-
-            {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.submitButton, loading && styles.submitButtonDisabled]}
-              onPress={handleCheckIn}
-              disabled={loading}
-              activeOpacity={0.8}
-            >
-              <LinearGradient
-                colors={loading ? ['#ccc', '#999'] : ['#667eea', '#764ba2']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                style={styles.submitGradient}
-              >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#fff" />
-                ) : (
-                  <>
-                    <MaterialIcons name="check-circle" size={22} color="#fff" />
-                    <Text style={styles.submitButtonText}>Xác nhận điểm danh</Text>
-                  </>
-                )}
-              </LinearGradient>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <MaterialIcons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
-        </Animated.View>
-      </KeyboardAvoidingView>
+
+          {/* Course Name */}
+          <View style={styles.courseNameContainer}>
+            <Text style={styles.courseName}>{lopHocPhanTen}</Text>
+          </View>
+
+          {/* Content */}
+          {loading ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#3B82F6" />
+              <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
+            </View>
+          ) : attendanceList.length === 0 ? (
+            <View style={styles.emptyContainer}>
+              <MaterialIcons name="inbox" size={48} color="#D1D5DB" />
+              <Text style={styles.emptyText}>Chưa có dữ liệu điểm danh</Text>
+            </View>
+          ) : (
+            <ScrollView style={styles.tableContainer} showsVerticalScrollIndicator={true}>
+              <ScrollView horizontal showsHorizontalScrollIndicator={true}>
+                <View style={styles.table}>
+                  {/* Table Header */}
+                  <View style={styles.tableHeader}>
+                    <Text style={[styles.headerCell, styles.sttColumn]}>STT</Text>
+                    <Text style={[styles.headerCell, styles.dateColumn]}>Ngày học</Text>
+                    <Text style={[styles.headerCell, styles.periodColumn]}>Tiết bắt đầu → Tiết kết thúc</Text>
+                    <Text style={[styles.headerCell, styles.statusColumn]}>Trạng thái</Text>
+                    <Text style={[styles.headerCell, styles.countColumn]}>Số tiết</Text>
+                  </View>
+
+                  {/* Table Body */}
+                  {attendanceList.map((item, index) => (
+                    <View key={item.ID} style={styles.tableRow}>
+                      <Text style={[styles.cell, styles.sttColumn]}>{index + 1}</Text>
+                      <Text style={[styles.cell, styles.dateColumn]}>{item.NGAYGHINHAN}</Text>
+                      <Text style={[styles.cell, styles.periodColumn]}>
+                        {item.TIETBATDAU} → {item.TIETKETTHUC}
+                      </Text>
+                      <View style={styles.statusColumn}>
+                        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.KIEUCHUYENCAN_TEN) + '20' }]}>
+                          <Text style={[styles.statusText, { color: getStatusColor(item.KIEUCHUYENCAN_TEN) }]}>
+                            {item.KIEUCHUYENCAN_TEN}
+                          </Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.cell, styles.countColumn]}>{item.SOLUONG}</Text>
+                    </View>
+                  ))}
+                </View>
+              </ScrollView>
+            </ScrollView>
+          )}
+
+          {/* Summary */}
+          {!loading && attendanceList.length > 0 && (
+            <View style={styles.summaryContainer}>
+              <View style={styles.summaryItem}>
+                <MaterialIcons name="check-circle" size={20} color="#10B981" />
+                <Text style={styles.summaryText}>
+                  Có mặt: {attendanceList.filter(item => item.KIEUCHUYENCAN_TEN.includes('Có mặt')).length}
+                </Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <MaterialIcons name="warning" size={20} color="#F59E0B" />
+                <Text style={styles.summaryText}>
+                  Vắng có phép: {attendanceList.filter(item => item.KIEUCHUYENCAN_TEN.includes('Vắng mặt có phép')).length}
+                </Text>
+              </View>
+              <View style={styles.summaryItem}>
+                <MaterialIcons name="cancel" size={20} color="#EF4444" />
+                <Text style={styles.summaryText}>
+                  Vắng không phép: {attendanceList.filter(item => !item.KIEUCHUYENCAN_TEN.includes('Có mặt') && !item.KIEUCHUYENCAN_TEN.includes('có phép')).length}
+                </Text>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
-  overlay: {
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 16,
   },
-  backdrop: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  modalContainer: {
-    width: '85%',
-    maxWidth: 400,
-    backgroundColor: '#fff',
-    borderRadius: 24,
-    overflow: 'hidden',
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    width: '100%',
+    maxHeight: '90%',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 20 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 30,
-    elevation: 20,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  header: {
-    paddingVertical: 20,
-    paddingHorizontal: 20,
+  modalHeader: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  headerContent: {
+  headerLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    flex: 1,
+    marginRight: 8,
   },
-  headerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#fff',
-    letterSpacing: 0.5,
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginLeft: 8,
+    flex: 1,
   },
   closeButton: {
     padding: 4,
   },
-  content: {
-    padding: 20,
-  },
-  subjectCard: {
-    backgroundColor: '#f8f9ff',
-    borderRadius: 16,
+  courseNameContainer: {
     padding: 16,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#e8eaff',
+    backgroundColor: '#F9FAFB',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
-  subjectName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a2e',
-    marginBottom: 10,
-    lineHeight: 22,
-  },
-  timeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  timeText: {
+  courseName: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#667eea',
-    flex: 1,
-  },
-  periodBadge: {
-    backgroundColor: '#667eea',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 10,
-  },
-  periodText: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  inputSection: {
-    marginBottom: 20,
-  },
-  inputLabel: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  inputWrapper: {
-    borderRadius: 12,
-    overflow: 'hidden',
-    borderWidth: 2,
-    borderColor: '#e8eaff',
-    backgroundColor: '#fff',
-  },
-  input: {
-    height: 50,
-    paddingHorizontal: 16,
-    fontSize: 15,
-    color: '#333',
+    color: '#374151',
     fontWeight: '500',
   },
-  submitButton: {
-    borderRadius: 14,
-    overflow: 'hidden',
-    shadowColor: '#667eea',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+  loadingContainer: {
+    padding: 40,
+    alignItems: 'center',
   },
-  submitButtonDisabled: {
-    shadowOpacity: 0.1,
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
   },
-  submitGradient: {
+  emptyContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  emptyText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  tableContainer: {
+    maxHeight: 400,
+  },
+  table: {
+    minWidth: 600,
+  },
+  tableHeader: {
     flexDirection: 'row',
+    backgroundColor: '#F3F4F6',
+    borderBottomWidth: 2,
+    borderBottomColor: '#E5E7EB',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  headerCell: {
+    fontSize: 13,
+    fontWeight: 'bold',
+    color: '#374151',
+    textAlign: 'center',
+  },
+  tableRow: {
+    flexDirection: 'row',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+  },
+  cell: {
+    fontSize: 13,
+    color: '#111827',
+    textAlign: 'center',
+  },
+  sttColumn: {
+    width: 40,
+  },
+  dateColumn: {
+    width: 90,
+  },
+  periodColumn: {
+    flex: 1,
+    minWidth: 100,
+  },
+  statusColumn: {
+    width: 120,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 24,
-    gap: 10,
   },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.5,
+  countColumn: {
+    width: 50,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: 'center',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  summaryContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    padding: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    backgroundColor: '#F9FAFB',
+    borderBottomLeftRadius: 16,
+    borderBottomRightRadius: 16,
+  },
+  summaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  summaryText: {
+    fontSize: 12,
+    color: '#374151',
+    fontWeight: '500',
   },
 });
+
+export default AttendanceModal;

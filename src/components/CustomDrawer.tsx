@@ -10,6 +10,7 @@ import {
   ScrollView,
   Animated,
   Dimensions,
+  ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,19 +28,20 @@ const { width: screenWidth } = Dimensions.get('window');
 
 const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigation }) => {
   const { user, logout } = useAuth();
-  const [expandedSchedule, setExpandedSchedule] = useState(false);
-  const [expandedFinance, setExpandedFinance] = useState(false);
-  const [expandedLearning, setExpandedLearning] = useState(false);
+  const [expandedMenus, setExpandedMenus] = useState<{ [key: string]: boolean }>({});
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
+  const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   
   // Animation cho smooth slide
   const slideAnim = useRef(new Animated.Value(-280)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
-  // Load student info khi drawer mở
+  // Load student info và menu khi drawer mở
   useEffect(() => {
     if (visible && user) {
       loadStudentInfo();
+      loadMenu();
     }
   }, [visible, user]);
 
@@ -49,6 +51,32 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
       setStudentInfo(info);
     } catch (error) {
       console.error('[CustomDrawer] Error loading student info:', error);
+    }
+  };
+
+  const loadMenu = async () => {
+    try {
+      setLoading(true);
+      const menuService = (await import('../services/menuService')).default;
+      const allMenus = await menuService.getMenuByUser();
+      const parentMenus = menuService.getParentMenus(allMenus);
+      
+      // Build menu structure with children
+      const menuStructure = parentMenus.map(parent => {
+        const children = menuService.getChildMenus(allMenus, parent.ID);
+        // console.log('[CustomDrawer] Parent menu:', parent.TENCHUCNANG, 'MACHUCNANG:', parent.MACHUCNANG);
+        return {
+          ...parent,
+          children: children.length > 0 ? children : null,
+        };
+      });
+      
+      // console.log('[CustomDrawer] Menu structure:', JSON.stringify(menuStructure, null, 2));
+      setMenuItems(menuStructure);
+    } catch (error) {
+      console.error('[CustomDrawer] Error loading menu:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -112,167 +140,101 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
     });
   };
 
-  const menuItems = [
-    {
-      id: 'home',
-      title: 'Trang chủ',
-      icon: 'home',
-      screen: 'Home',
-      hasArrow: false,
-      expandable: false,
-    },
-    {
-      id: 'news',
-      title: 'Tin tức',
-      icon: 'newspaper',
-      screen: 'News',
-      hasArrow: false,
-      expandable: false,
-    },
-    {
-      id: 'profile',
-      title: 'Profile',
-      icon: 'person',
-      screen: 'Profile',
-      hasArrow: true,
-      expandable: false,
-    },
-    {
-      id: 'learning',
-      title: 'Góc học tập',
-      icon: 'school',
-      screen: 'Learning',
-      hasArrow: true,
-      expandable: true,
-    },
-    {
-      id: 'recruitment',
-      title: 'Đăng ký trực tuyến',
-      icon: 'how-to-reg',
-      screen: 'Recruitment',
-      hasArrow: true,
-      expandable: false,
-    },
-    {
-      id: 'schedule',
-      title: 'Thời khóa biểu',
-      icon: 'schedule',
-      screen: 'Schedule',
-      hasArrow: true,
-      expandable: true,
-    },
-    {
-      id: 'finance',
-      title: 'Tài chính',
-      icon: 'account-balance-wallet',
-      screen: 'Finance',
-      hasArrow: true,
-      expandable: true,
-    },
-  ];
+  // Map icon names from API
+  const getIconName = (machucnang: string, tenanh: string): string => {
+    // Map based on MACHUCNANG from API
+    const iconMap: { [key: string]: string } = {
+      // Menu chính
+      'CSV.DASH': 'dashboard',
+      'CSV.TTUC': 'article',
+      'CSV.PROF': 'person',
+      'CSV.GOHT': 'school',
+      'CSV.DKH': 'how-to-reg',
+      'CSV.TKB': 'event',
+      'CSV.TAICHINH': 'account-balance-wallet',
+      
+      // Profile submenu
+      'CSV.TNHS': 'description',
+      'CSV.XHS': 'folder-open',
+      'SV.XXN': 'verified',
+      
+      // Góc học tập submenu
+      'CSV.TCD': 'grade',
+      'CSV.DIRL': 'emoji-events',
+      'CSV.CTHO': 'menu-book',
+      'CSV.DKPC': 'assignment-turned-in',
+      
+      // Đăng ký trực tuyến submenu
+      'CSV.DAKY': 'edit-note',
+      'CSV.NVON': 'favorite',
+      'CSVXEDM': 'visibility',
+      'CSV.TCDAKY': 'search',
+      'CSVDKDH': 'explore',
+      'CSVDKTMT': 'assignment',
+      
+      // Thời khóa biểu submenu
+      'CSV.LICHH': 'schedule',
+      'CSV.LICHT': 'assignment',
+      
+      // Tài chính submenu
+      'CSV.HP': 'payments',
+    };
+    
+    return iconMap[machucnang] || 'circle';
+  };
 
-  const scheduleSubItems = [
-    {
-      id: 'study',
-      title: 'Lịch học',
-      icon: 'school',
-    },
-    {
-      id: 'exam',
-      title: 'Lịch thi',
-      icon: 'assignment',
-    },
-  ];
-
-  const financeSubItems = [
-    {
-      id: 'tuition',
-      title: 'Học phí',
-      icon: 'payments',
-    },
-    // {
-    //   id: 'payment-history',
-    //   title: 'Lịch sử thanh toán',
-    //   icon: 'receipt',
-    // },
-    // {
-    //   id: 'debt',
-    //   title: 'Công nợ',
-    //   icon: 'account-balance',
-    // },
-  ];
-
-  const learningSubItems = [
-    {
-      id: 'grade-lookup',
-      title: 'Tra cứu điểm',
-      icon: 'grade',
-    },
-    {
-      id: 'training-score',
-      title: 'Điểm rèn luyện',
-      icon: 'emoji-events',
-    },
-    {
-      id: 'curriculum',
-      title: 'Chương trình học',
-      icon: 'menu-book',
-    },
-    {
-      id: 'appeal',
-      title: 'Đăng ký xin phúc khảo',
-      icon: 'assignment-turned-in',
-    },
-  ];
+  // Map screen names from API
+  const getScreenName = (machucnang: string, duongdanhienthi: string): string | null => {
+    const screenMap: { [key: string]: string } = {
+      'CSV.DASH': 'Home',
+      'CSV.TTUC': 'News',
+      'CSV.PROF': 'Profile',
+      'CSV.LICHH': 'StudySchedule',
+      'CSV.LICHT': 'ExamSchedule',
+      'CSV.TAICHINH': 'Finance',
+      'CSV.TCD': 'GradeLookup',
+      'CSV.HP': 'Finance',
+      'CSV.TNHS': 'ProfileDetail',
+      'CSV.XHS': 'ViewProfile',
+      'SV.XXN': 'Confirmation',
+      'CSV.DIRL': 'TrainingScore',
+      'CSV.CTHO': 'Curriculum',
+      'CSV.DKPC': 'Appeal',
+      'CSV.TCDAKY': 'RegistrationResult',
+    };
+    
+    return screenMap[machucnang] || null;
+  };
 
   const handleMenuPress = (item: any) => {
-    if (item.expandable && item.id === 'schedule') {
-      setExpandedSchedule(!expandedSchedule);
-    } else if (item.expandable && item.id === 'finance') {
-      setExpandedFinance(!expandedFinance);
-    } else if (item.expandable && item.id === 'learning') {
-      setExpandedLearning(!expandedLearning);
+    // Nếu có children, toggle expand
+    if (item.children && item.children.length > 0) {
+      setExpandedMenus(prev => ({
+        ...prev,
+        [item.ID]: !prev[item.ID],
+      }));
     } else {
-      handleClose();
-      // Delay navigation một chút để animation hoàn thành
-      setTimeout(() => {
-        navigation.navigate(item.screen);
-      }, 50);
+      // Nếu không có children, navigate
+      const screenName = getScreenName(item.MACHUCNANG, item.DUONGDANHIENTHI);
+      if (screenName) {
+        handleClose();
+        setTimeout(() => {
+          navigation.navigate(screenName);
+        }, 50);
+      }
     }
   };
 
-  const handleScheduleSubItemPress = (subItem: any) => {
-    handleClose();
-    
-    setTimeout(() => {
-      if (subItem.id === 'study') {
-        navigation.navigate('StudySchedule');
-      } else if (subItem.id === 'exam') {
-        navigation.navigate('ExamSchedule');
-      }
-    }, 50);
-  };
-
-  const handleFinanceSubItemPress = (subItem: any) => {
-    handleClose();
-    
-    setTimeout(() => {
-      // Navigate to Finance screen with specific tab/section
-      navigation.navigate('Finance', { section: subItem.id });
-    }, 50);
-  };
-
-  const handleLearningSubItemPress = (subItem: any) => {
-    handleClose();
-    
-    setTimeout(() => {
-      if (subItem.id === 'grade-lookup') {
-        navigation.navigate('GradeLookup');
-      } else {
-        // TODO: Navigate to other learning screens when implemented
-        console.log('Learning sub-item pressed:', subItem.id);
-      }
-    }, 50);
+  const handleSubMenuPress = (subItem: any) => {
+    const screenName = getScreenName(subItem.MACHUCNANG, subItem.DUONGDANHIENTHI);
+    if (screenName) {
+      handleClose();
+      setTimeout(() => {
+        navigation.navigate(screenName);
+      }, 50);
+    } else {
+      // console.log('[CustomDrawer] No screen mapping for:', subItem.MACHUCNANG);
+    }
   };
 
   const handleLogout = () => {
@@ -347,123 +309,68 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
                 style={styles.menuScrollView}
                 showsVerticalScrollIndicator={false}
               >
-                <View style={styles.menuContainer}>
-                  {menuItems.map((item) => (
-                    <View key={item.id}>
-                      <TouchableOpacity
-                        style={styles.menuItem}
-                        onPress={() => handleMenuPress(item)}
-                        activeOpacity={0.7}
-                      >
-                        <View style={styles.menuItemContent}>
-                          <MaterialIcons
-                            name={item.icon as any}
-                            size={24}
-                            color="#FFFFFF"
-                            style={styles.menuIcon}
-                          />
-                          <Text style={styles.menuText}>{item.title}</Text>
-                        </View>
-                        {item.hasArrow && (
-                          <MaterialIcons
-                            name={
-                              item.expandable && item.id === 'schedule' && expandedSchedule
-                                ? "keyboard-arrow-up"
-                                : item.expandable && item.id === 'finance' && expandedFinance
-                                ? "keyboard-arrow-up"
-                                : item.expandable && item.id === 'learning' && expandedLearning
-                                ? "keyboard-arrow-up"
-                                : "chevron-right"
-                            }
-                            size={20}
-                            color="rgba(255, 255, 255, 0.7)"
-                          />
+                {loading ? (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                    <Text style={styles.loadingText}>Đang tải menu...</Text>
+                  </View>
+                ) : (
+                  <View style={styles.menuContainer}>
+                    {menuItems.map((item) => (
+                      <View key={item.ID}>
+                        <TouchableOpacity
+                          style={styles.menuItem}
+                          onPress={() => handleMenuPress(item)}
+                          activeOpacity={0.7}
+                        >
+                          <View style={styles.menuItemContent}>
+                            <MaterialIcons
+                              name={getIconName(item.MACHUCNANG, item.TENANH) as any}
+                              size={24}
+                              color="#FFFFFF"
+                              style={styles.menuIcon}
+                            />
+                            <Text style={styles.menuText}>{item.TENCHUCNANG}</Text>
+                          </View>
+                          {item.children && item.children.length > 0 && (
+                            <MaterialIcons
+                              name={expandedMenus[item.ID] ? "keyboard-arrow-up" : "chevron-right"}
+                              size={20}
+                              color="rgba(255, 255, 255, 0.7)"
+                            />
+                          )}
+                        </TouchableOpacity>
+
+                        {/* Expanded Sub-items */}
+                        {item.children && item.children.length > 0 && expandedMenus[item.ID] && (
+                          <View style={styles.subMenuContainer}>
+                            {item.children.map((subItem: any, index: number) => (
+                              <TouchableOpacity
+                                key={subItem.ID}
+                                style={styles.subMenuItem}
+                                onPress={() => handleSubMenuPress(subItem)}
+                                activeOpacity={0.7}
+                              >
+                                <View style={styles.subMenuContent}>
+                                  <View style={styles.timelineContainer}>
+                                    <View style={styles.timelineDot} />
+                                    {index < item.children.length - 1 && (
+                                      <View style={styles.timelineLine} />
+                                    )}
+                                  </View>
+                                  
+                                  <View style={styles.subMenuTextContainer}>
+                                    <Text style={styles.subMenuTitle}>{subItem.TENCHUCNANG}</Text>
+                                  </View>
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
                         )}
-                      </TouchableOpacity>
-
-                      {/* Expanded Schedule Sub-items */}
-                      {item.id === 'schedule' && expandedSchedule && (
-                        <View style={styles.subMenuContainer}>
-                          {scheduleSubItems.map((subItem, index) => (
-                            <TouchableOpacity
-                              key={subItem.id}
-                              style={styles.subMenuItem}
-                              onPress={() => handleScheduleSubItemPress(subItem)}
-                              activeOpacity={0.7}
-                            >
-                              <View style={styles.subMenuContent}>
-                                <View style={styles.timelineContainer}>
-                                  <View style={styles.timelineDot} />
-                                  {index < scheduleSubItems.length - 1 && (
-                                    <View style={styles.timelineLine} />
-                                  )}
-                                </View>
-                                
-                                <View style={styles.subMenuTextContainer}>
-                                  <Text style={styles.subMenuTitle}>{subItem.title}</Text>
-                                </View>
-                              </View>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
-
-                      {/* Expanded Finance Sub-items */}
-                      {item.id === 'finance' && expandedFinance && (
-                        <View style={styles.subMenuContainer}>
-                          {financeSubItems.map((subItem, index) => (
-                            <TouchableOpacity
-                              key={subItem.id}
-                              style={styles.subMenuItem}
-                              onPress={() => handleFinanceSubItemPress(subItem)}
-                              activeOpacity={0.7}
-                            >
-                              <View style={styles.subMenuContent}>
-                                <View style={styles.timelineContainer}>
-                                  <View style={[styles.timelineDot, { backgroundColor: '#F59E0B' }]} />
-                                  {index < financeSubItems.length - 1 && (
-                                    <View style={[styles.timelineLine, { backgroundColor: 'rgba(245, 158, 11, 0.3)' }]} />
-                                  )}
-                                </View>
-                                
-                                <View style={styles.subMenuTextContainer}>
-                                  <Text style={styles.subMenuTitle}>{subItem.title}</Text>
-                                </View>
-                              </View>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
-
-                      {/* Expanded Learning Sub-items */}
-                      {item.id === 'learning' && expandedLearning && (
-                        <View style={styles.subMenuContainer}>
-                          {learningSubItems.map((subItem, index) => (
-                            <TouchableOpacity
-                              key={subItem.id}
-                              style={styles.subMenuItem}
-                              onPress={() => handleLearningSubItemPress(subItem)}
-                              activeOpacity={0.7}
-                            >
-                              <View style={styles.subMenuContent}>
-                                <View style={styles.timelineContainer}>
-                                  <View style={[styles.timelineDot, { backgroundColor: '#10B981' }]} />
-                                  {index < learningSubItems.length - 1 && (
-                                    <View style={[styles.timelineLine, { backgroundColor: 'rgba(16, 185, 129, 0.3)' }]} />
-                                  )}
-                                </View>
-                                
-                                <View style={styles.subMenuTextContainer}>
-                                  <Text style={styles.subMenuTitle}>{subItem.title}</Text>
-                                </View>
-                              </View>
-                            </TouchableOpacity>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  ))}
-                </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </ScrollView>
 
               {/* Footer với nút đăng xuất */}
@@ -567,6 +474,16 @@ const styles = StyleSheet.create({
   },
   menuContainer: {
     paddingTop: 10,
+  },
+  loadingContainer: {
+    paddingVertical: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
   },
   menuItem: {
     flexDirection: 'row',
