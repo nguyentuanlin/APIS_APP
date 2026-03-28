@@ -15,8 +15,8 @@ import { MaterialIcons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { scheduleService, ScheduleItem, StudentInfo } from '../services/scheduleService';
-import { AttendanceModal } from '../components/AttendanceModal';
-import { AttendanceDetail, attendanceService, ClassStudent } from '../services/attendanceService';
+import AttendanceModal from '../components/AttendanceModal';
+import attendanceService, { AttendanceDetail, ClassStudent } from '../services/attendanceService';
 
 const StudyScheduleScreen = () => {
   const navigation = useNavigation();
@@ -444,6 +444,11 @@ const StudyScheduleScreen = () => {
     if (!selectedSchedule) return null;
 
     const loadClassStudents = async () => {
+      // Feature tạm thời không khả dụng - API chưa có
+      Alert.alert('Thông báo', 'Tính năng xem danh sách sinh viên đang được phát triển');
+      return;
+      
+      /* 
       if (classStudents.length > 0) {
         // Đã load rồi, chỉ toggle
         setShowStudentList(!showStudentList);
@@ -464,6 +469,7 @@ const StudyScheduleScreen = () => {
       } finally {
         setLoadingStudents(false);
       }
+      */
     };
 
     // Convert ScheduleItem to AttendanceDetail
