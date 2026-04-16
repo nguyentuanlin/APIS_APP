@@ -505,7 +505,6 @@ const StudyScheduleScreen = () => {
       } finally {
         setLoadingStudents(false);
       }
-      */
     };
 
     return (
