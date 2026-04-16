@@ -33,6 +33,9 @@ const FinanceDetailModal: React.FC<FinanceDetailModalProps> = ({
   // Xác định loại modal dựa vào title
   const isExemptionModal = title.includes('được miễn');
   const isPaidModal = title.includes('đã nộp');
+  const shouldShowPaymentCodeColumn =
+    title.toLowerCase().includes('khoản nợ chung') &&
+    typeof onPaymentCodePress === 'function';
   const amountColumnHeader = isExemptionModal ? 'Số tiền được miễn' : 'Số tiền';
   
   const renderTableHeader = () => (
@@ -48,12 +51,18 @@ const FinanceDetailModal: React.FC<FinanceDetailModalProps> = ({
         <Text style={[styles.headerCell, styles.documentColumn]}>Số chứng từ</Text>
       )}
       <Text style={[styles.headerCell, styles.creatorColumn]}>Người tạo</Text>
+      {shouldShowPaymentCodeColumn && (
+        <Text style={[styles.headerCell, styles.paymentCodeColumn]}>Mã thanh toán định danh</Text>
+      )}
     </View>
   );
 
   const renderTableRow = (item: FinanceItem, index: number) => {
     // Thử các trường khác nhau để tìm số tiền đúng
     const amount = item.SOTIEN || item.SOTIENPHAINOP || 0;
+    const paymentCode = item.MATHANHTOANDINHDANH;
+    const paymentAmount = item.SOTIENGACHNO || item.SOTIENPHAINOP || item.SOTIEN || 0;
+    const paymentContent = item.NOIDUNG || item.TAICHINH_CACKHOANTHU_TEN || '';
     
     return (
       <View key={item.ID} style={[styles.tableRow, index % 2 === 0 && styles.evenRow]}>
@@ -74,6 +83,24 @@ const FinanceDetailModal: React.FC<FinanceDetailModalProps> = ({
         <Text style={[styles.cell, styles.creatorColumn]} numberOfLines={1}>
           {item.NGUOITAO_TENDAYDU || ''}
         </Text>
+        {shouldShowPaymentCodeColumn && (
+          <View style={styles.paymentCodeColumn}>
+            {paymentCode ? (
+              <TouchableOpacity
+                style={styles.paymentCodeButton}
+                onPress={() => onPaymentCodePress?.('', paymentCode, paymentAmount, paymentContent)}
+                activeOpacity={0.7}
+              >
+                <Text style={styles.paymentCodeText} numberOfLines={1}>
+                  {paymentCode}
+                </Text>
+                <MaterialIcons name="qr-code" size={14} color="#3B82F6" />
+              </TouchableOpacity>
+            ) : (
+              <Text style={[styles.cell, styles.paymentCodeEmpty]}>-</Text>
+            )}
+          </View>
+        )}
       </View>
     );
   };
@@ -93,6 +120,9 @@ const FinanceDetailModal: React.FC<FinanceDetailModalProps> = ({
         <Text style={[styles.cell, styles.documentColumn]}></Text>
       )}
       <Text style={[styles.cell, styles.creatorColumn]}></Text>
+      {shouldShowPaymentCodeColumn && (
+        <Text style={[styles.cell, styles.paymentCodeColumn]}></Text>
+      )}
     </View>
   );
 
@@ -120,7 +150,7 @@ const FinanceDetailModal: React.FC<FinanceDetailModalProps> = ({
             showsHorizontalScrollIndicator={true}
             persistentScrollbar={true}
           >
-            <View style={styles.tableContainer}>
+            <View style={[styles.tableContainer, shouldShowPaymentCodeColumn && styles.tableContainerWithPaymentCode]}>
               {renderTableHeader()}
               
               <ScrollView 
@@ -190,6 +220,9 @@ const styles = StyleSheet.create({
   tableContainer: {
     minWidth: width * 1.9,
   },
+  tableContainerWithPaymentCode: {
+    minWidth: width * 2.2,
+  },
   tableHeader: {
     flexDirection: 'row',
     backgroundColor: '#F3F4F6',
@@ -248,6 +281,9 @@ const styles = StyleSheet.create({
   amountColumn: {
     width: 120,
   },
+  paymentCodeColumn: {
+    width: 160,
+  },
   dateColumn: {
     width: 100,
   },
@@ -256,6 +292,24 @@ const styles = StyleSheet.create({
   },
   documentColumn: {
     width: 100,
+  },
+  paymentCodeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
+  },
+  paymentCodeText: {
+    fontSize: 11,
+    color: '#3B82F6',
+    fontWeight: '600',
+    maxWidth: 130,
+    textAlign: 'center',
+  },
+  paymentCodeEmpty: {
+    textAlign: 'center',
   },
   amountText: {
     fontWeight: '600',

@@ -69,12 +69,18 @@ export function parseJWT(token: string): any {
  */
 export function validateGoogleConfig(): boolean {
   if (!GOOGLE_SSO_CONFIG.clientId) {
-    console.error('❌ Missing EXPO_PUBLIC_GOOGLE_CLIENT_ID in .env');
+    console.error(
+      '❌ Missing EXPO_PUBLIC_GOOGLE_CLIENT_ID. ' +
+        'Set it in .env for local dev and in EAS build profile env (eas.json/EAS secrets) for production.'
+    );
     return false;
   }
 
   if (!GOOGLE_SSO_CONFIG.redirectUri) {
-    console.error('❌ Missing EXPO_PUBLIC_GOOGLE_REDIRECT_URI in .env');
+    console.error(
+      '❌ Missing EXPO_PUBLIC_GOOGLE_REDIRECT_URI. ' +
+        'Set it in .env for local dev and in EAS build profile env (eas.json/EAS secrets) for production.'
+    );
     return false;
   }
 

@@ -83,8 +83,18 @@ const LoginScreen = () => {
       // Navigation sẽ được xử lý tự động bởi App.tsx
     } catch (error: any) {
       console.error('[LoginScreen] ❌ Login thất bại:', error.message);
-      setErrorMessage(error.message || 'Đăng nhập thất bại');
-      Alert.alert('Đăng nhập thất bại', error.message);
+
+      const rawMessage = String(error?.message || 'Đăng nhập thất bại');
+      const shouldMaskAsWrongCredentials =
+        rawMessage.includes('Không thể kết nối tới máy chủ') ||
+        rawMessage.includes('Network Error');
+
+      const uiMessage = shouldMaskAsWrongCredentials
+        ? 'Sai tài khoản hoặc mật khẩu. Vui lòng thử lại.'
+        : rawMessage;
+
+      setErrorMessage(uiMessage);
+      Alert.alert('Đăng nhập thất bại', uiMessage);
     }
   };
 

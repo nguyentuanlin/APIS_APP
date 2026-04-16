@@ -7,9 +7,12 @@
 
 import React, { useState, useEffect } from 'react';
 import { View, Modal, StyleSheet, ActivityIndicator, Text, TouchableOpacity } from 'react-native';
-import { WebView } from 'react-native-webview';
+import * as WebBrowser from 'expo-web-browser';
+import * as Linking from 'expo-linking';
 import { googleSSOService, GoogleUserInfo } from '../services/googleSSOService';
 import { validateGoogleConfig } from '../config/googleSSOConfig';
+
+WebBrowser.maybeCompleteAuthSession();
 
 interface GoogleSSOWebViewProps {
   visible: boolean;
@@ -34,6 +37,14 @@ export const GoogleSSOWebView: React.FC<GoogleSSOWebViewProps> = ({
     }
   }, [visible]);
 
+  useEffect(() => {
+    if (!visible) return;
+    const subscription = Linking.addEventListener('url', ({ url }) => {
+      handleCallbackUrl(url);
+    });
+    return () => subscription.remove();
+  }, [visible]);
+
   const initializeAuth = async () => {
     try {
       setIsLoading(true);
@@ -51,6 +62,10 @@ export const GoogleSSOWebView: React.FC<GoogleSSOWebViewProps> = ({
 
       console.log('🚀 Google SSO initialized');
       console.log('   Auth URL:', url);
+
+      // IMPORTANT: Google blocks OAuth inside WebView (disallowed_useragent)
+      // Use system browser auth session instead.
+      await startAuthSession(url);
     } catch (err: any) {
       console.error('❌ Failed to initialize Google SSO:', err);
       setError(err.message);
@@ -60,60 +75,81 @@ export const GoogleSSOWebView: React.FC<GoogleSSOWebViewProps> = ({
     }
   };
 
-  const handleNavigationStateChange = async (navState: any) => {
-    const { url } = navState;
-    
-    console.log('📍 Navigation:', url);
+  const startAuthSession = async (url: string) => {
+    // Backend is expected to finally redirect to the app scheme (deep link)
+    // Keep it explicit so it works in dev-client and standalone builds.
+    const returnUrl = Linking.createURL('auth', { scheme: 'myapp' });
+
+    const result = await WebBrowser.openAuthSessionAsync(url, returnUrl, {
+      preferEphemeralSession: false,
+    });
+
+    if (result.type === 'success' && result.url) {
+      await handleCallbackUrl(result.url);
+      return;
+    }
+
+    if (result.type === 'cancel' || result.type === 'dismiss') {
+      handleClose();
+      return;
+    }
+  };
+
+  const handleCallbackUrl = async (url: string) => {
+    if (!url) return;
+    console.log('📍 Auth callback:', url);
 
     try {
       // Detect callback từ backend
       // Backend redirect về: myapp://auth?access_token=xxx&...
       if (url.includes('myapp://auth') || url.includes('socialapp://redirect')) {
         console.log('✅ Detected callback URL');
-        
-        // Parse URL parameters
+
         const urlObj = new URL(url);
         const params: any = {};
         urlObj.searchParams.forEach((value, key) => {
           params[key] = value;
         });
 
-        // Handle callback
         const userInfo = await googleSSOService.handleCallback(params);
-        
         if (userInfo) {
           onSuccess(userInfo);
-        } else {
-          throw new Error('Failed to get user info');
+          return;
         }
+
+        throw new Error('Failed to get user info');
       }
 
-      // Detect error từ backend
+      // Detect error từ backend / provider
       if (url.includes('/api/auth/error') || url.includes('error=')) {
         const urlObj = new URL(url);
-        const error = urlObj.searchParams.get('error');
+        const errCode = urlObj.searchParams.get('error');
         const errorDescription = urlObj.searchParams.get('error_description');
-        
-        console.error('❌ Backend error:', error);
+
+        console.error('❌ Auth error:', errCode);
         console.error('   Description:', errorDescription);
-        
+
         let errorMessage = 'Đăng nhập thất bại';
-        
-        if (error === 'OAuthCallback') {
-          errorMessage = 'Backend không thể xử lý callback từ Google. Vui lòng kiểm tra:\n' +
+
+        if (errCode === 'OAuthCallback') {
+          errorMessage =
+            'Backend không thể xử lý callback từ Google. Vui lòng kiểm tra:\n' +
             '- Client Secret có đúng không?\n' +
             '- Redirect URI trong Google Console có khớp không?\n' +
             '- Backend logs để xem chi tiết lỗi';
+        } else if (errCode === 'disallowed_useragent') {
+          errorMessage =
+            'Google đã chặn đăng nhập trong WebView. Ứng dụng đã chuyển sang đăng nhập bằng trình duyệt hệ thống.';
         } else if (errorDescription) {
           errorMessage = errorDescription;
-        } else if (error) {
-          errorMessage = error;
+        } else if (errCode) {
+          errorMessage = errCode;
         }
-        
+
         throw new Error(errorMessage);
       }
     } catch (err: any) {
-      console.error('❌ Navigation error:', err);
+      console.error('❌ Callback handling error:', err);
       setError(err.message);
       onError(err);
     }
@@ -165,40 +201,15 @@ export const GoogleSSOWebView: React.FC<GoogleSSOWebViewProps> = ({
         )}
 
         {/* WebView */}
-        {authUrl && !error && (
-          <WebView
-            source={{ uri: authUrl }}
-            onNavigationStateChange={handleNavigationStateChange}
-            startInLoadingState={true}
-            javaScriptEnabled={true}
-            domStorageEnabled={true}
-            sharedCookiesEnabled={true}
-            thirdPartyCookiesEnabled={true}
-            incognito={false}
-            cacheEnabled={true}
-            mixedContentMode="always"
-            allowsInlineMediaPlayback={true}
-            mediaPlaybackRequiresUserAction={false}
-            injectedJavaScriptBeforeContentLoaded={`
-              document.cookie = "test=1; path=/; SameSite=None; Secure";
-              true;
-            `}
-            renderLoading={() => (
-              <View style={styles.webViewLoading}>
-                <ActivityIndicator size="large" color="#DB4437" />
-              </View>
-            )}
-            onError={(syntheticEvent) => {
-              const { nativeEvent } = syntheticEvent;
-              console.error('WebView error:', nativeEvent);
-              setError('Không thể tải trang đăng nhập');
-            }}
-            onHttpError={(syntheticEvent) => {
-              const { nativeEvent } = syntheticEvent;
-              console.error('HTTP error:', nativeEvent.statusCode);
-            }}
-            style={styles.webView}
-          />
+        {authUrl && !error && !isLoading && (
+          <View style={styles.browserHint}>
+            <Text style={styles.browserHintText}>
+              Đang mở trình duyệt để đăng nhập Google...
+            </Text>
+            <TouchableOpacity style={styles.retryButton} onPress={() => startAuthSession(authUrl)}>
+              <Text style={styles.retryButtonText}>Mở lại</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
     </Modal>
@@ -269,17 +280,16 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  webView: {
+  browserHint: {
     flex: 1,
-  },
-  webViewLoading: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    padding: 24,
+    gap: 16,
+  },
+  browserHintText: {
+    fontSize: 16,
+    color: '#333',
+    textAlign: 'center',
   },
 });

@@ -16,7 +16,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { scheduleService, ScheduleItem, StudentInfo } from '../services/scheduleService';
 import AttendanceModal from '../components/AttendanceModal';
-import attendanceService, { AttendanceDetail, ClassStudent } from '../services/attendanceService';
+
+import attendanceService from '../services/attendanceService';
+type ClassStudent = {
+  ID: string;
+  QLSV_NGUOIHOC_MASO: string;
+  QLSV_NGUOIHOC_HODEM: string;
+  QLSV_NGUOIHOC_TEN: string;
+};
 
 const StudyScheduleScreen = () => {
   const navigation = useNavigation();
@@ -444,52 +451,61 @@ const StudyScheduleScreen = () => {
     if (!selectedSchedule) return null;
 
     const loadClassStudents = async () => {
-      // Feature tạm thời không khả dụng - API chưa có
-      Alert.alert('Thông báo', 'Tính năng xem danh sách sinh viên đang được phát triển');
-      return;
-      
-      /* 
+      const idDangKyLopHocPhan = (selectedSchedule as any).DANGKY_LOPHOCPHAN_ID;
+      const idLopHocPhan = selectedSchedule.IDLOPHOCPHAN;
+
+      console.log('[StudySchedule] loadClassStudents: start', {
+        idDangKyLopHocPhan,
+        idLopHocPhan,
+        ngayGhiNhan: selectedSchedule.NGAYHOC,
+        cachedCount: classStudents.length,
+        showStudentList,
+      });
       if (classStudents.length > 0) {
         // Đã load rồi, chỉ toggle
         setShowStudentList(!showStudentList);
+        console.log('[StudySchedule] loadClassStudents: toggle (cached)', {
+          nextShow: !showStudentList,
+          cachedCount: classStudents.length,
+        });
         return;
       }
 
       setLoadingStudents(true);
       try {
-        const students = await attendanceService.getClassStudents(
-          selectedSchedule.IDLOPHOCPHAN,
-          selectedSchedule.NGAYHOC
-        );
+        const tryFetch = async (lopHocPhanId: string, label: string) => {
+          const students = await (attendanceService as any).getClassStudents(
+            lopHocPhanId,
+            selectedSchedule.NGAYHOC
+          );
+          console.log('[StudySchedule] loadClassStudents: fetched', {
+            via: label,
+            lopHocPhanId,
+            count: Array.isArray(students) ? students.length : -1,
+          });
+          return students as ClassStudent[];
+        };
+
+        let students: ClassStudent[] = [];
+        if (idDangKyLopHocPhan) {
+          students = await tryFetch(idDangKyLopHocPhan, 'DANGKY_LOPHOCPHAN_ID');
+        }
+
+        if (students.length === 0 && idLopHocPhan && idLopHocPhan !== idDangKyLopHocPhan) {
+          students = await tryFetch(idLopHocPhan, 'IDLOPHOCPHAN');
+        }
+
+        console.log('[StudySchedule] loadClassStudents: success', { count: students.length });
         setClassStudents(students);
         setShowStudentList(true);
       } catch (error: any) {
+        console.error('[StudySchedule] loadClassStudents: error', error);
         Alert.alert('Lỗi', 'Không thể tải danh sách sinh viên');
         console.error('Error loading students:', error);
       } finally {
         setLoadingStudents(false);
       }
       */
-    };
-
-    // Convert ScheduleItem to AttendanceDetail
-    const attendanceDetail: AttendanceDetail = {
-      IDSINHVIEN: selectedSchedule.IDSINHVIEN,
-      IDLICHHOC: selectedSchedule.IDLICHHOC,
-      TENHOCPHAN: selectedSchedule.TENHOCPHAN,
-      TENLOPHOCPHAN: selectedSchedule.TENLOPHOCPHAN,
-      NGAYHOC: selectedSchedule.NGAYHOC,
-      GIOBATDAU: selectedSchedule.GIOBATDAU,
-      PHUTBATDAU: selectedSchedule.PHUTBATDAU,
-      GIOKETTHUC: selectedSchedule.GIOKETTHUC,
-      PHUTKETTHUC: selectedSchedule.PHUTKETTHUC,
-      PHONGHOC_TEN: selectedSchedule.TENPHONGHOC,
-      GIANGVIEN: selectedSchedule.GIANGVIEN,
-      TIETBATDAU: selectedSchedule.TIETBATDAU,
-      TIETKETTHUC: selectedSchedule.TIETKETTHUC,
-      SOTIET: selectedSchedule.SOTIET,
-      DIEM_DANHSACH_ID: selectedSchedule.IDSINHVIEN, // Có thể cần điều chỉnh
-      THONGTINCHUYENCAN: selectedSchedule.THONGTINCHUYENCAN || undefined,
     };
 
     return (
@@ -587,7 +603,17 @@ const StudyScheduleScreen = () => {
               {/* Nút xem danh sách lớp */}
               <TouchableOpacity
                 style={styles.studentListButton}
-                onPress={loadClassStudents}
+                onPress={() => {
+                  console.log('[StudySchedule] click: studentListButton', {
+                    scheduleId: selectedSchedule.ID,
+                    idDangKyLopHocPhan: (selectedSchedule as any).DANGKY_LOPHOCPHAN_ID,
+                    idLopHocPhan: selectedSchedule.IDLOPHOCPHAN,
+                    ngayGhiNhan: selectedSchedule.NGAYHOC,
+                    cachedCount: classStudents.length,
+                    showStudentList,
+                  });
+                  loadClassStudents();
+                }}
                 disabled={loadingStudents}
               >
                 <MaterialIcons 
@@ -603,40 +629,42 @@ const StudyScheduleScreen = () => {
 
               {/* Danh sách sinh viên */}
               {showStudentList && classStudents.length > 0 && (
-                <ScrollView 
-                  horizontal 
-                  showsHorizontalScrollIndicator={false}
-                  style={styles.studentListScrollContainer}
-                >
-                  <View style={styles.studentListContainer}>
-                    <View style={styles.studentListHeader}>
-                      <Text style={[styles.studentListHeaderText, { width: 60 }]}>STT</Text>
-                      <Text style={[styles.studentListHeaderText, { width: 120 }]}>Mã số</Text>
-                      <Text style={[styles.studentListHeaderText, { width: 180 }]}>Họ đệm</Text>
-                      <Text style={[styles.studentListHeaderText, { width: 100 }]}>Tên</Text>
-                    </View>
-                    {classStudents.map((student, index) => (
-                      <View 
-                        key={student.ID} 
-                        style={[
-                          styles.studentListRow,
-                          index % 2 === 0 && styles.studentListRowEven
-                        ]}
-                      >
-                        <Text style={[styles.studentListCell, { width: 60 }]}>{index + 1}</Text>
-                        <Text style={[styles.studentListCell, styles.studentListCellMSSV, { width: 120 }]}>
-                          {student.QLSV_NGUOIHOC_MASO}
-                        </Text>
-                        <Text style={[styles.studentListCell, { width: 180 }]}>
-                          {student.QLSV_NGUOIHOC_HODEM}
-                        </Text>
-                        <Text style={[styles.studentListCell, { width: 100 }]}>
-                          {student.QLSV_NGUOIHOC_TEN}
-                        </Text>
+                <View style={styles.studentTableWrapper}>
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator
+                    style={styles.studentTableScroll}
+                  >
+                    <View style={styles.studentTable}>
+                      <View style={styles.studentTableHeader}>
+                        <Text style={[styles.studentTableHeaderText, styles.colStt]}>STT</Text>
+                        <Text style={[styles.studentTableHeaderText, styles.colMssv]}>Mã số</Text>
+                        <Text style={[styles.studentTableHeaderText, styles.colHoDem]}>Họ đệm</Text>
+                        <Text style={[styles.studentTableHeaderText, styles.colTen]}>Tên</Text>
                       </View>
-                    ))}
-                  </View>
-                </ScrollView>
+                      {classStudents.map((student, index) => (
+                        <View
+                          key={student.ID || String(index)}
+                          style={[
+                            styles.studentTableRow,
+                            index % 2 === 1 && styles.studentTableRowEven,
+                          ]}
+                        >
+                          <Text style={[styles.studentTableCell, styles.colStt]}>{index + 1}</Text>
+                          <Text style={[styles.studentTableCell, styles.colMssv, styles.studentTableCellMSSV]}>
+                            {student.QLSV_NGUOIHOC_MASO}
+                          </Text>
+                          <Text style={[styles.studentTableCell, styles.colHoDem]} numberOfLines={1}>
+                            {student.QLSV_NGUOIHOC_HODEM}
+                          </Text>
+                          <Text style={[styles.studentTableCell, styles.colTen]} numberOfLines={1}>
+                            {student.QLSV_NGUOIHOC_TEN}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
               )}
 
               {/* Nút điểm danh - chỉ hiển thị cho lịch học */}
@@ -776,28 +804,9 @@ const StudyScheduleScreen = () => {
         <AttendanceModal
           visible={attendanceModalVisible}
           onClose={() => setAttendanceModalVisible(false)}
-          schedule={selectedSchedule ? {
-            IDSINHVIEN: selectedSchedule.IDSINHVIEN,
-            IDLICHHOC: selectedSchedule.IDLICHHOC,
-            TENHOCPHAN: selectedSchedule.TENHOCPHAN,
-            TENLOPHOCPHAN: selectedSchedule.TENLOPHOCPHAN,
-            NGAYHOC: selectedSchedule.NGAYHOC,
-            GIOBATDAU: selectedSchedule.GIOBATDAU,
-            PHUTBATDAU: selectedSchedule.PHUTBATDAU,
-            GIOKETTHUC: selectedSchedule.GIOKETTHUC,
-            PHUTKETTHUC: selectedSchedule.PHUTKETTHUC,
-            PHONGHOC_TEN: selectedSchedule.TENPHONGHOC,
-            GIANGVIEN: selectedSchedule.GIANGVIEN,
-            TIETBATDAU: selectedSchedule.TIETBATDAU,
-            TIETKETTHUC: selectedSchedule.TIETKETTHUC,
-            SOTIET: selectedSchedule.SOTIET,
-            DIEM_DANHSACH_ID: selectedSchedule.IDSINHVIEN,
-            THONGTINCHUYENCAN: selectedSchedule.THONGTINCHUYENCAN || undefined,
-          } : null}
-          onSuccess={() => {
-            // Refresh lại dữ liệu sau khi điểm danh thành công
-            loadData();
-          }}
+          lopHocPhanId={(selectedSchedule as any)?.DANGKY_LOPHOCPHAN_ID ?? selectedSchedule?.IDLOPHOCPHAN ?? ''}
+          lopHocPhanTen={selectedSchedule?.DANGKY_LOPHOCPHAN_TEN ?? selectedSchedule?.TENHOCPHAN ?? ''}
+          ngayHoc={selectedSchedule?.NGAYHOC ?? ''}
         />
       </LinearGradient>
     </SafeAreaView>
@@ -1311,57 +1320,67 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#667eea',
   },
-  studentListScrollContainer: {
+  studentTableWrapper: {
     marginTop: 16,
     marginHorizontal: 20,
     marginBottom: 16,
   },
-  studentListContainer: {
-    backgroundColor: '#fff',
+  studentTableScroll: {
+    flexGrow: 0,
+  },
+  studentTable: {
     borderRadius: 12,
     overflow: 'hidden',
     borderWidth: 1,
-    borderColor: '#e0e0e0',
-    minWidth: 460, // Tổng width của các cột
+    borderColor: '#E5E7EB',
+    backgroundColor: '#FFFFFF',
+    minWidth: 520,
   },
-  studentListHeader: {
+  studentTableHeader: {
     flexDirection: 'row',
-    backgroundColor: '#5b7cfa',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
-    alignItems: 'center',
-  },
-  studentListHeaderText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#fff',
-    textAlign: 'left',
-  },
-  studentListRow: {
-    flexDirection: 'row',
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    backgroundColor: '#F3F4F6',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#f0f0f0',
-    backgroundColor: '#fff',
+    borderBottomColor: '#E5E7EB',
   },
-  studentListRowEven: {
-    backgroundColor: '#fafbff',
+  studentTableHeaderText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
   },
-  studentListCell: {
-    fontSize: 14,
-    color: '#1a1a1a',
-    textAlign: 'left',
+  studentTableRow: {
+    flexDirection: 'row',
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    alignItems: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
   },
-  studentListCellMSSV: {
-    fontWeight: '600',
-    color: '#333',
+  studentTableRowEven: {
+    backgroundColor: '#FAFAFA',
   },
-  studentListCellAbsent: {
-    fontSize: 11,
-    color: '#ef4444',
-    fontWeight: '600',
+  studentTableCell: {
+    fontSize: 13,
+    color: '#111827',
+  },
+  studentTableCellMSSV: {
+    fontWeight: '700',
+  },
+  colStt: {
+    width: 60,
+  },
+  colMssv: {
+    width: 130,
+  },
+  colHoDem: {
+    width: 220,
+  },
+  colTen: {
+    width: 110,
+    textAlign: 'right',
   },
 });
 

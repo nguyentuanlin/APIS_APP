@@ -1,19 +1,20 @@
 {
   "expo": {
-    "name": "TLU Student Portal",
-    "slug": "tlu-student-portal",
+    "name": "IU",
+    "slug": "social-app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/logo.PNG",
     "userInterfaceStyle": "light",
     "scheme": "myapp",
     "newArchEnabled": false,
     "plugins": [
       "expo-dev-client",
-      "expo-asset"
+      "expo-asset",
+      "expo-web-browser"
     ],
     "splash": {
-      "image": "./assets/icon.png",
+      "image": "./assets/logo.PNG",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
@@ -33,7 +34,7 @@
       "newArchEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
       "adaptiveIcon": {
-        "foregroundImage": "assets/icon.png",
+        "foregroundImage": "./assets/logo.PNG",
         "backgroundColor": "#ffffff"
       }
     },

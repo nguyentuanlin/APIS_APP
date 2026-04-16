@@ -58,6 +58,11 @@ const RegistrationMenuScreen = () => {
       navigation.navigate(screenName);
     } else {
       console.log('[RegistrationMenuScreen] No screen mapping for:', item.MACHUCNANG, item.TENCHUCNANG);
+      // Fallback to CourseRegistration for any registration-related menu
+      if (item.TENCHUCNANG.toLowerCase().includes('đăng ký')) {
+        // @ts-ignore
+        navigation.navigate('CourseRegistration');
+      }
     }
   };
 

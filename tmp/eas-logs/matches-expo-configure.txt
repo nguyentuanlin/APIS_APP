@@ -1,0 +1,1 @@
+﻿1770: {"name":"worker","pid":819,"phase":"RUN_FASTLANE","buildId":"72dbd137-e93e-4d5a-b6da-9e4675be15af","level":30,"msg":"› Executing SocialApp » [Expo] Configure project","time":"2026-04-15T04:47:09.731Z","v":0,"logId":"019d8f76-efa3-7169-bdc0-346828623f34"}

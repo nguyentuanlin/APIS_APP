@@ -57,6 +57,13 @@ export interface WeeklySchedule {
   BAIHOC: string | null;
 }
 
+export interface ClassStudent {
+  ID: string;
+  QLSV_NGUOIHOC_MASO: string;
+  QLSV_NGUOIHOC_HODEM: string;
+  QLSV_NGUOIHOC_TEN: string;
+}
+
 class AttendanceService {
   private async getAuthToken(): Promise<string> {
     const token = await AsyncStorage.getItem('access_token');
@@ -269,6 +276,83 @@ class AttendanceService {
       return scheduleList;
     } catch (error) {
       console.error('[AttendanceService] Error fetching weekly schedule:', error);
+      throw error;
+    }
+  }
+
+  // Lấy danh sách sinh viên của lớp học phần (theo ngày ghi nhận)
+  async getClassStudents(
+    lopHocPhanId: string,
+    ngayGhiNhan: string,
+    tuKhoa: string = ''
+  ): Promise<ClassStudent[]> {
+    try {
+      console.log('[AttendanceService] getClassStudents: request', {
+        lopHocPhanId,
+        ngayGhiNhan,
+        tuKhoa,
+      });
+
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+
+      const requestBody = {
+        func: 'pkg_congthongtincanbo.LayDSDangKyHoc_2',
+        iM: 'AzzSystem',
+        strChucNang_Id: 'B46109CD333D4E3DAC50D43E8607ED46',
+        strDaoTao_LopHocPhan_Id: lopHocPhanId,
+        strNgayGhiNhan: ngayGhiNhan,
+        strNguoiThucHien_Id: userId,
+        strReport_Id: '',
+        strTuKhoa: tuKhoa,
+      };
+
+      // Endpoint theo request thực tế từ hệ thống
+      const encryptionKey = 'DSA4BRIFIC8mCjgJLiIecwPP';
+
+      const response = await fetch(
+        `https://iu.cmcu.edu.vn/nhansuapi/api/NS_ThongTinCanBo_MH/${encryptionKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            A: AE(JSON.stringify(requestBody), encryptionKey),
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const temp = await response.json();
+      if (!temp.Success) {
+        throw new Error(temp.Message || 'Lỗi khi lấy danh sách lớp');
+      }
+
+      const decryptedData = AD(temp.Data.B, requestBody.iM);
+      if (!decryptedData) {
+        throw new Error('Không thể giải mã dữ liệu');
+      }
+
+      const apiData = JSON.parse(decryptedData);
+      const rows = Array.isArray(apiData) ? apiData : (apiData.Data || []);
+
+      console.log('[AttendanceService] getClassStudents: response', {
+        rows: Array.isArray(rows) ? rows.length : -1,
+      });
+
+      return (rows as any[]).map((row) => ({
+        ID: String(row.ID ?? ''),
+        QLSV_NGUOIHOC_MASO: String(row.QLSV_NGUOIHOC_MASO ?? ''),
+        QLSV_NGUOIHOC_HODEM: String(row.QLSV_NGUOIHOC_HODEM ?? ''),
+        QLSV_NGUOIHOC_TEN: String(row.QLSV_NGUOIHOC_TEN ?? ''),
+      }));
+    } catch (error) {
+      console.error('[AttendanceService] Error fetching class students:', error);
       throw error;
     }
   }

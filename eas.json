@@ -1,6 +1,7 @@
 {
   "cli": {
-    "version": ">= 13.2.0"
+    "version": ">= 13.2.0",
+    "appVersionSource": "remote"
   },
   "build": {
     "development": {
@@ -15,16 +16,23 @@
       },
       "env": {
         "EXPO_USE_HERMES": "false",
-        "EXPO_NEW_ARCH_ENABLED": "0"
+        "EXPO_NEW_ARCH_ENABLED": "0",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "892381177812-aathq5og241ftgqd6s697uiasvic6o62.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/google"
       }
     },
     "preview": {
       "distribution": "internal",
       "ios": {
-        "simulator": false
+        "simulator": false,
+        "autoIncrement": true
       },
       "env": {
-        "EXPO_NEW_ARCH_ENABLED": "0"
+        "EXPO_NEW_ARCH_ENABLED": "0",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "892381177812-aathq5og241ftgqd6s697uiasvic6o62.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/google",
+        "EXPO_PUBLIC_API_BASE_URL_ANDROID": "https://iu.cmcu.edu.vn/cmsapi/api",
+        "EXPO_PUBLIC_API_BASE_URL_IOS": "https://iu.cmcu.edu.vn/cmsapi/api"
       }
     },
     "release-apk": {
@@ -33,12 +41,21 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_NEW_ARCH_ENABLED": "0"
+        "EXPO_NEW_ARCH_ENABLED": "0",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "892381177812-aathq5og241ftgqd6s697uiasvic6o62.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/google"
       }
     },
     "production": {
+      "ios": {
+        "autoIncrement": true
+      },
       "env": {
-        "EXPO_NEW_ARCH_ENABLED": "0"
+        "EXPO_NEW_ARCH_ENABLED": "0",
+        "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "892381177812-aathq5og241ftgqd6s697uiasvic6o62.apps.googleusercontent.com",
+        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/google",
+        "EXPO_PUBLIC_API_BASE_URL_ANDROID": "https://iu.cmcu.edu.vn/cmsapi/api",
+        "EXPO_PUBLIC_API_BASE_URL_IOS": "https://iu.cmcu.edu.vn/cmsapi/api"
       }
     }
   },

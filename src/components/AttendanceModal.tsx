@@ -16,6 +16,7 @@ interface AttendanceModalProps {
   onClose: () => void;
   lopHocPhanId: string;
   lopHocPhanTen: string;
+  ngayHoc?: string;
 }
 
 const AttendanceModal: React.FC<AttendanceModalProps> = ({
@@ -23,9 +24,15 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
   onClose,
   lopHocPhanId,
   lopHocPhanTen,
+  ngayHoc,
 }) => {
   const [loading, setLoading] = useState(false);
   const [attendanceList, setAttendanceList] = useState<AttendanceRecord[]>([]);
+
+  const selectedNgayHoc = (ngayHoc || '').trim();
+  const displayAttendanceList = selectedNgayHoc
+    ? attendanceList.filter((x) => x.NGAYGHINHAN === selectedNgayHoc)
+    : attendanceList;
 
   useEffect(() => {
     if (visible && lopHocPhanId) {
@@ -76,6 +83,11 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
           {/* Course Name */}
           <View style={styles.courseNameContainer}>
             <Text style={styles.courseName}>{lopHocPhanTen}</Text>
+            {!!selectedNgayHoc && (
+              <Text style={styles.selectedDateText}>
+                Đang xem ngày: {selectedNgayHoc}
+              </Text>
+            )}
           </View>
 
           {/* Content */}
@@ -84,10 +96,12 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
               <ActivityIndicator size="large" color="#3B82F6" />
               <Text style={styles.loadingText}>Đang tải dữ liệu...</Text>
             </View>
-          ) : attendanceList.length === 0 ? (
+          ) : displayAttendanceList.length === 0 ? (
             <View style={styles.emptyContainer}>
               <MaterialIcons name="inbox" size={48} color="#D1D5DB" />
-              <Text style={styles.emptyText}>Chưa có dữ liệu điểm danh</Text>
+              <Text style={styles.emptyText}>
+                {selectedNgayHoc ? 'Chưa có dữ liệu điểm danh cho ngày này' : 'Chưa có dữ liệu điểm danh'}
+              </Text>
             </View>
           ) : (
             <ScrollView style={styles.tableContainer} showsVerticalScrollIndicator={true}>
@@ -103,7 +117,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
                   </View>
 
                   {/* Table Body */}
-                  {attendanceList.map((item, index) => (
+                  {displayAttendanceList.map((item, index) => (
                     <View key={item.ID} style={styles.tableRow}>
                       <Text style={[styles.cell, styles.sttColumn]}>{index + 1}</Text>
                       <Text style={[styles.cell, styles.dateColumn]}>{item.NGAYGHINHAN}</Text>
@@ -118,7 +132,7 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
                         </View>
                       </View>
                       <Text style={[styles.cell, styles.countColumn]}>{item.SOLUONG}</Text>
-                    </View>
+                      </View>
                   ))}
                 </View>
               </ScrollView>
@@ -126,24 +140,24 @@ const AttendanceModal: React.FC<AttendanceModalProps> = ({
           )}
 
           {/* Summary */}
-          {!loading && attendanceList.length > 0 && (
+          {!loading && displayAttendanceList.length > 0 && (
             <View style={styles.summaryContainer}>
               <View style={styles.summaryItem}>
                 <MaterialIcons name="check-circle" size={20} color="#10B981" />
                 <Text style={styles.summaryText}>
-                  Có mặt: {attendanceList.filter(item => item.KIEUCHUYENCAN_TEN.includes('Có mặt')).length}
+                  Có mặt: {displayAttendanceList.filter(item => item.KIEUCHUYENCAN_TEN.includes('Có mặt')).length}
                 </Text>
               </View>
               <View style={styles.summaryItem}>
                 <MaterialIcons name="warning" size={20} color="#F59E0B" />
                 <Text style={styles.summaryText}>
-                  Vắng có phép: {attendanceList.filter(item => item.KIEUCHUYENCAN_TEN.includes('Vắng mặt có phép')).length}
+                  Vắng có phép: {displayAttendanceList.filter(item => item.KIEUCHUYENCAN_TEN.includes('Vắng mặt có phép')).length}
                 </Text>
               </View>
               <View style={styles.summaryItem}>
                 <MaterialIcons name="cancel" size={20} color="#EF4444" />
                 <Text style={styles.summaryText}>
-                  Vắng không phép: {attendanceList.filter(item => !item.KIEUCHUYENCAN_TEN.includes('Có mặt') && !item.KIEUCHUYENCAN_TEN.includes('có phép')).length}
+                  Vắng không phép: {displayAttendanceList.filter(item => !item.KIEUCHUYENCAN_TEN.includes('Có mặt') && !item.KIEUCHUYENCAN_TEN.includes('có phép')).length}
                 </Text>
               </View>
             </View>
@@ -207,6 +221,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#374151',
     fontWeight: '500',
+  },
+  selectedDateText: {
+    marginTop: 6,
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
   },
   loadingContainer: {
     padding: 40,

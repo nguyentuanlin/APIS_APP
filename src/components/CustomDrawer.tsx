@@ -201,6 +201,8 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
       'CSV.CTHO': 'Curriculum',
       'CSV.DKPC': 'Appeal',
       'CSV.TCDAKY': 'RegistrationResult',
+      'CSV.DAKY': 'CourseRegistration', // Thêm mapping cho đăng ký học
+      'CSV.DKH': 'RegistrationMenu', // Menu đăng ký trực tuyến
     };
     
     return screenMap[machucnang] || null;

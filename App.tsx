@@ -26,6 +26,8 @@
   import CurriculumScreen from './src/screens/CurriculumScreen';
   import AppealScreen from './src/screens/AppealScreen';
   import RegistrationResultScreen from './src/screens/RegistrationResultScreen';
+  import CourseRegistrationScreen from './src/screens/CourseRegistrationScreen';
+  import CourseClassDetailScreen from './src/screens/CourseClassDetailScreen';
   import { ActivityIndicator, View, StyleSheet } from 'react-native';
   const Stack = createNativeStackNavigator();
 
@@ -66,6 +68,8 @@
               <Stack.Screen name="Curriculum" component={CurriculumScreen} />
               <Stack.Screen name="Appeal" component={AppealScreen} />
               <Stack.Screen name="RegistrationResult" component={RegistrationResultScreen} />
+              <Stack.Screen name="CourseRegistration" component={CourseRegistrationScreen} />
+              <Stack.Screen name="CourseClassDetail" component={CourseClassDetailScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
             </>
           ) : (

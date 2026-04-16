@@ -11,6 +11,7 @@ import {
   Linking,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
+import QRCode from 'react-native-qrcode-svg';
 
 interface FastQRModalProps {
   visible: boolean;
@@ -31,6 +32,7 @@ const FastQRModal: React.FC<FastQRModalProps> = ({
   amount,
   content,
 }) => {
+  const hasRemoteQr = Boolean(qrUrl && qrUrl.trim().length > 0);
   const [showQR, setShowQR] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
@@ -155,37 +157,46 @@ const FastQRModal: React.FC<FastQRModalProps> = ({
               </View>
             ) : (
               <View style={styles.qrContainer}>
-                {!imageLoaded && !imageError && (
-                  <View style={styles.loadingContainer}>
-                    <ActivityIndicator size="large" color="#3B82F6" />
-                    <Text style={styles.loadingText}>Đang tải mã QR...</Text>
+                {hasRemoteQr ? (
+                  <>
+                    {!imageLoaded && !imageError && (
+                      <View style={styles.loadingContainer}>
+                        <ActivityIndicator size="large" color="#3B82F6" />
+                        <Text style={styles.loadingText}>Đang tải mã QR...</Text>
+                      </View>
+                    )}
+                    
+                    {imageError && (
+                      <View style={styles.errorContainer}>
+                        <MaterialIcons name="error-outline" size={48} color="#EF4444" />
+                        <Text style={styles.errorText}>Không thể tải mã QR</Text>
+                        <TouchableOpacity 
+                          style={styles.retryButton}
+                          onPress={() => {
+                            setImageError(false);
+                            setImageLoaded(false);
+                          }}
+                        >
+                          <Text style={styles.retryButtonText}>Thử lại</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                    
+                    {showQR && (
+                      <Image
+                        source={{ uri: qrUrl }}
+                        style={[styles.qrImage, !imageLoaded && styles.hiddenImage]}
+                        resizeMode="contain"
+                        onLoad={handleImageLoad}
+                        onError={handleImageError}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <View style={styles.localQrContainer}>
+                    <QRCode value={paymentCode || ''} size={260} />
+                    <Text style={styles.localQrHint}>Quét QR để lấy mã thanh toán</Text>
                   </View>
-                )}
-                
-                {imageError && (
-                  <View style={styles.errorContainer}>
-                    <MaterialIcons name="error-outline" size={48} color="#EF4444" />
-                    <Text style={styles.errorText}>Không thể tải mã QR</Text>
-                    <TouchableOpacity 
-                      style={styles.retryButton}
-                      onPress={() => {
-                        setImageError(false);
-                        setImageLoaded(false);
-                      }}
-                    >
-                      <Text style={styles.retryButtonText}>Thử lại</Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-                
-                {showQR && (
-                  <Image
-                    source={{ uri: qrUrl }}
-                    style={[styles.qrImage, !imageLoaded && styles.hiddenImage]}
-                    resizeMode="contain"
-                    onLoad={handleImageLoad}
-                    onError={handleImageError}
-                  />
                 )}
               </View>
             )}
@@ -315,6 +326,17 @@ const styles = StyleSheet.create({
   qrContainer: {
     alignItems: 'center',
     paddingVertical: 20,
+  },
+  localQrContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 260,
+  },
+  localQrHint: {
+    marginTop: 12,
+    fontSize: 13,
+    color: '#6B7280',
+    textAlign: 'center',
   },
   qrImage: {
     width: 200,
