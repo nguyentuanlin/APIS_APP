@@ -51,9 +51,24 @@ const DashboardShortcuts: React.FC<DashboardShortcutsProps> = ({ navigation }) =
       'SV.XXN': 'Confirmation',
       'CSV.HP': 'Finance',
       'CSV.LICHH': 'StudySchedule',
+      'CSV.LICHT': 'ExamSchedule',
       'CSV.DAKY': 'RegistrationMenu',
       'CSV.TNHS': 'ProfileDetail',
       'CSV.DIRL': 'TrainingScore',
+      'CSV.TCD': 'GradeLookup', // Theo dõi kết quả học tập
+      'CSV.TTUC': 'News',
+      'CSV.PROF': 'Profile',
+      'CSV.TTHP': 'OnlinePayment',
+      'CSV.HXTN': 'GraduationApplication',
+      'CSV.NVON': 'WishlistRegistration',
+      'CSV.TCDAKY': 'RegistrationResult',
+      'CSV.CTHO': 'Curriculum',
+      'CSV.DKPC': 'Appeal',
+      'CSVDKDH': 'StudyOrientation',
+      'CSVDKTMT': 'ExamRetake',
+      'DKCND': 'GradeRecognition',
+      'SV.GYC': 'OneStopService',
+      'CSV.vbqd': 'Document',
     };
     
     return screenMap[machucnang] || null;

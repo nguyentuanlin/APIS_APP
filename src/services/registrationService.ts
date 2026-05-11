@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Interfaces
 export interface ThoiGianHoc {
@@ -125,7 +126,7 @@ class RegistrationService {
       
       // console.log('[RegistrationService] Calling API...');
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -194,7 +195,7 @@ class RegistrationService {
       
       // console.log('[RegistrationService] Calling API...');
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

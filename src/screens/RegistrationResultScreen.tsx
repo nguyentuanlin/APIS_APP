@@ -5,6 +5,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialIcons } from '@expo/vector-icons';
@@ -12,7 +13,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { Text } from 'react-native';
 import registrationResultService, { KeHoachDangKy, LopHocPhan } from '../services/registrationResultService';
-import appealService, { ThoiGianItem } from '../services/appealService';
+import { ThoiGianItem } from '../services/appealService';
 import AttendanceModal from '../components/AttendanceModal';
 import ProcessScoreModal from '../components/ProcessScoreModal';
 import CourseDetailModal from '../components/CourseDetailModal';
@@ -28,6 +29,7 @@ const RegistrationResultScreen = () => {
   const [loadingKeHoach, setLoadingKeHoach] = useState(false);
   const [loadingLopHocPhan, setLoadingLopHocPhan] = useState(false);
   const [showThoiGianDropdown, setShowThoiGianDropdown] = useState(false);
+  const [showKeHoachDropdown, setShowKeHoachDropdown] = useState(false);
   const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [showProcessScoreModal, setShowProcessScoreModal] = useState(false);
   const [showCourseDetailModal, setShowCourseDetailModal] = useState(false);
@@ -40,12 +42,12 @@ const RegistrationResultScreen = () => {
   const loadThoiGian = async () => {
     try {
       setLoading(true);
-      const data = await appealService.getThoiGianList();
-      // Filter out duplicate periods - only keep main periods (without comma)
-      const filteredData = data.filter(item => !item.THOIGIAN.includes(','));
-      setThoiGianList(filteredData);
-      
-      // Auto select first item
+      const data = await registrationResultService.getThoiGianDangKy();
+      // Lọc trùng - chỉ giữ học kỳ chính (không có dấu phẩy)
+      const filteredData = data.filter((item) => !item.THOIGIAN.includes(','));
+      setThoiGianList(filteredData as ThoiGianItem[]);
+
+      // Auto select first
       if (filteredData.length > 0) {
         setSelectedThoiGian(filteredData[0].ID);
         loadKeHoach(filteredData[0].ID);
@@ -96,9 +98,37 @@ const RegistrationResultScreen = () => {
     loadKeHoach(value);
   };
 
+  const handleKeHoachChange = (value: string) => {
+    setSelectedKeHoach(value);
+    setShowKeHoachDropdown(false);
+    if (selectedThoiGian) loadLopHocPhan(selectedThoiGian, value);
+  };
+
+  const handleXem = () => {
+    if (selectedThoiGian && selectedKeHoach) {
+      loadLopHocPhan(selectedThoiGian, selectedKeHoach);
+    } else {
+      Alert.alert('Thiếu thông tin', 'Vui lòng chọn học kỳ và kế hoạch trước');
+    }
+  };
+
+  const handleXacNhanTatCa = () => {
+    Alert.alert(
+      'Xác nhận tất cả',
+      'Tính năng "Xác nhận tất cả" yêu cầu thao tác phức tạp. Vui lòng dùng web qldt.eaut.edu.vn để xác nhận.',
+      [{ text: 'OK' }]
+    );
+  };
+
   const getSelectedThoiGianLabel = () => {
     const selected = thoiGianList.find(item => item.ID === selectedThoiGian);
     return selected ? selected.THOIGIAN.replace(/_/g, ' - ') : 'Chọn học kỳ';
+  };
+
+  const getSelectedKeHoachLabel = () => {
+    const selected = keHoachList.find((item) => item.ID === selectedKeHoach);
+    if (!selected) return 'Chọn kế hoạch';
+    return selected.MAKEHOACH || selected.TENKEHOACH || selected.ID;
   };
 
   const getTotalCredits = () => {
@@ -162,15 +192,18 @@ const RegistrationResultScreen = () => {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Filter Card */}
         <View style={styles.filterCard}>
-          <Text style={styles.filterLabel}>Chọn học kỳ</Text>
+          <Text style={styles.filterLabel}>Kế hoạch đăng ký học</Text>
           <TouchableOpacity
             style={styles.dropdownButton}
-            onPress={() => setShowThoiGianDropdown(!showThoiGianDropdown)}
+            onPress={() => {
+              setShowKeHoachDropdown(false);
+              setShowThoiGianDropdown(!showThoiGianDropdown);
+            }}
             activeOpacity={0.7}
           >
             <Text style={styles.dropdownButtonText}>{getSelectedThoiGianLabel()}</Text>
             <MaterialIcons
-              name={showThoiGianDropdown ? "keyboard-arrow-up" : "keyboard-arrow-down"}
+              name={showThoiGianDropdown ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
               size={24}
               color="#6B7280"
             />
@@ -178,8 +211,8 @@ const RegistrationResultScreen = () => {
 
           {showThoiGianDropdown && (
             <View style={styles.dropdownContainer}>
-              <ScrollView 
-                style={styles.dropdownList} 
+              <ScrollView
+                style={styles.dropdownList}
                 nestedScrollEnabled={true}
                 showsVerticalScrollIndicator={true}
                 bounces={false}
@@ -210,6 +243,96 @@ const RegistrationResultScreen = () => {
               </ScrollView>
             </View>
           )}
+
+          {/* Dropdown Kế hoạch */}
+          <Text style={[styles.filterLabel, { marginTop: 12 }]}>Kế hoạch chi tiết</Text>
+          <TouchableOpacity
+            style={[
+              styles.dropdownButton,
+              (loadingKeHoach || keHoachList.length === 0) && styles.dropdownDisabled,
+            ]}
+            onPress={() => {
+              setShowThoiGianDropdown(false);
+              if (keHoachList.length > 0) setShowKeHoachDropdown(!showKeHoachDropdown);
+            }}
+            disabled={loadingKeHoach || keHoachList.length === 0}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.dropdownButtonText}>
+              {loadingKeHoach
+                ? 'Đang tải...'
+                : keHoachList.length === 0
+                ? '-- Không có kế hoạch --'
+                : getSelectedKeHoachLabel()}
+            </Text>
+            <MaterialIcons
+              name={showKeHoachDropdown ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
+              size={24}
+              color="#6B7280"
+            />
+          </TouchableOpacity>
+
+          {showKeHoachDropdown && (
+            <View style={styles.dropdownContainer}>
+              <ScrollView
+                style={styles.dropdownList}
+                nestedScrollEnabled={true}
+                showsVerticalScrollIndicator={true}
+                bounces={false}
+              >
+                {keHoachList.map((item) => (
+                  <TouchableOpacity
+                    key={item.ID}
+                    style={[
+                      styles.dropdownItem,
+                      selectedKeHoach === item.ID && styles.dropdownItemSelected,
+                    ]}
+                    onPress={() => handleKeHoachChange(item.ID)}
+                    activeOpacity={0.7}
+                  >
+                    <Text
+                      style={[
+                        styles.dropdownItemText,
+                        selectedKeHoach === item.ID && styles.dropdownItemTextSelected,
+                      ]}
+                    >
+                      {item.MAKEHOACH || item.TENKEHOACH || item.ID}
+                    </Text>
+                    {selectedKeHoach === item.ID && (
+                      <MaterialIcons name="check" size={20} color="#3B82F6" />
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </ScrollView>
+            </View>
+          )}
+
+          {/* Action buttons */}
+          <View style={styles.actionRow}>
+            <TouchableOpacity
+              style={styles.btnXem}
+              onPress={handleXem}
+              disabled={loadingLopHocPhan}
+              activeOpacity={0.7}
+            >
+              {loadingLopHocPhan ? (
+                <ActivityIndicator size="small" color="#FFFFFF" />
+              ) : (
+                <>
+                  <MaterialIcons name="search" size={18} color="#FFFFFF" />
+                  <Text style={styles.btnXemText}>Xem</Text>
+                </>
+              )}
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.btnConfirmAll}
+              onPress={handleXacNhanTatCa}
+              activeOpacity={0.7}
+            >
+              <MaterialIcons name="check-circle-outline" size={18} color="#FFFFFF" />
+              <Text style={styles.btnConfirmAllText}>Xác nhận tất cả</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {/* Summary Card */}
@@ -438,6 +561,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
   },
+  dropdownDisabled: { opacity: 0.5, backgroundColor: '#F3F4F6' },
+  actionRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+  },
+  btnXem: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1E40AF',
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  btnXemText: { color: '#FFFFFF', fontWeight: '700', marginLeft: 6, fontSize: 13 },
+  btnConfirmAll: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#10B981',
+    paddingVertical: 12,
+    borderRadius: 8,
+  },
+  btnConfirmAllText: { color: '#FFFFFF', fontWeight: '700', marginLeft: 6, fontSize: 13 },
   dropdownButtonText: {
     fontSize: 15,
     color: '#111827',

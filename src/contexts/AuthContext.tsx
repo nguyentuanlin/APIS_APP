@@ -223,6 +223,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // console.log('[AuthContext] 🚪 LOGOUT - Xóa TOÀN BỘ dữ liệu');
       // console.log('[AuthContext] 📊 Current user:', user?.fullname);
       
+      // Gỡ FCM token khỏi server trước khi clear user
+      try {
+        const { fcmService } = await import('../services/fcmService');
+        await fcmService.cleanupOnLogout(user);
+      } catch (err) {
+        console.warn('[AuthContext] ⚠️ Không thể cleanup FCM:', err);
+      }
+
       // Clear timers và user state ngay lập tức
       // console.log('[AuthContext] 📍 Bước 1: Clear timers và user state...');
       clearSessionTimers();

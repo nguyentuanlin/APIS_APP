@@ -1,7 +1,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
-const BASE_URL = 'https://iu.cmcu.edu.vn/quanlytuyensinhapi/api';
+const BASE_URL = API_HOSTS.quanLyTuyenSinh;
 
 // Cache configuration
 const CACHE_DURATION = 10 * 60 * 1000; // 10 phút
@@ -443,8 +444,7 @@ class NewsService {
     if (imagePath.startsWith('http')) return imagePath;
     
     // API trả về path dạng: "ApisTinTuc/Avatar/unsave_xxx.jpg"
-    // Cần thêm prefix: "https://iu.cmcu.edu.vn/upload/"
-    return `https://iu.cmcu.edu.vn/upload/${imagePath}`;
+    return `${API_HOSTS.upload}/${imagePath}`;
   }
 
   /**

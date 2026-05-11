@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Interfaces
 export interface ThoiGianItem {
@@ -81,7 +82,7 @@ class AppealService {
 
       const encryptionKey = 'DSA4FSkuKAYoIC8P';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/xulyhocvuapi/api/XLHV_TP_PhucKhao_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.xuLyHocVu}/XLHV_TP_PhucKhao_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ class AppealService {
 
       const encryptionKey = 'DSA4BRIVKSgRKTQiCikgLgIgDykgLwPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/xulyhocvuapi/api/XLHV_TP_PhucKhao_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.xuLyHocVu}/XLHV_TP_PhucKhao_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -20,8 +20,8 @@ export interface AzureADConfig {
   };
 }
 
-const TENANT_ID = '67f466ec-d460-4f90-9465-f88465e460ef';
-const CLIENT_ID = '0f263b0c-86ad-46c8-a583-0381ec2c8be3';
+const TENANT_ID = 'f8cdef31-a31e-4b4a-93e4-5f571e91255a';
+const CLIENT_ID = 'aa70c3d3-8d84-4f24-8a4c-eecd75dff0b8';
 
 // Redirect URL format khác nhau cho iOS và Android
 const getRedirectUrl = (): string => {

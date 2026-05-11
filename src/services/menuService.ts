@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Interfaces
 export interface MenuItem {
@@ -101,7 +102,7 @@ class MenuService {
 
       const encryptionKey = 'DSA4BRICKTQiDyAvJhUpJC4PJjQuKAU0LyYeCCUP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/cmsapi/api/CMS_Quyen_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.cms}/CMS_Quyen_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -193,7 +194,7 @@ class MenuService {
 
       const encryptionKey = 'DSA4BRICKTQiDyAvJhUpJC4RKSAvDS4gKAPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/cmsapi/api/CMS_QuanLyNguoiDung_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.cms}/CMS_QuanLyNguoiDung_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -12,7 +12,7 @@ import {
   Dimensions,
   ActivityIndicator,
 } from 'react-native';
-import { MaterialIcons } from '@expo/vector-icons';
+import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
@@ -140,6 +140,75 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
     });
   };
 
+  // Parse FontAwesome class from TENANH (vd "fal fa-angle-double-right" -> "angle-double-right")
+  const parseFaIcon = (tenanh?: string): string | null => {
+    if (!tenanh) return null;
+    const match = tenanh.match(/fa-([a-z0-9-]+)/i);
+    return match ? match[1] : null;
+  };
+
+  // Map FA name -> MaterialIcons name. Icon nào ở đây = FA Pro/không render được trong free,
+  // dùng MaterialIcons thay thế.
+  const faToMaterialFallback: Record<string, string> = {
+    // Edit / Đăng ký
+    'pen-square': 'edit-note',
+    'user-edit': 'edit-note',
+    'pencil-alt': 'edit',
+    'users-class': 'how-to-reg',
+    'chalkboard-teacher': 'cast-for-education',
+    // Money / Tài chính
+    'coins': 'account-balance-wallet',
+    'money-bill-wave': 'payments',
+    'money-check-alt': 'payments',
+    'sack-dollar': 'account-balance-wallet',
+    'hand-holding-usd': 'payments',
+    'file-invoice-dollar': 'receipt-long',
+    'piggy-bank': 'savings',
+    // Học tập
+    'book-reader': 'menu-book',
+    'graduation-cap': 'school',
+    'user-graduate': 'school',
+    // Khác
+    'angle-double-right': 'chevron-right',
+    'door-open': 'meeting-room',
+    'door-closed': 'meeting-room',
+    'tasks': 'checklist',
+    'clipboard-list': 'assignment',
+    'concierge-bell': 'support-agent',
+  };
+
+  // Check icon có tồn tại trong FontAwesome5 Free font không (glyphMap chứa cả Pro)
+  const faGlyphMap: Record<string, any> = (FontAwesome5 as any).glyphMap || {};
+  const faHas = (name: string) =>
+    Object.prototype.hasOwnProperty.call(faGlyphMap, name) &&
+    !Object.prototype.hasOwnProperty.call(faToMaterialFallback, name);
+
+  // Render menu icon - prefer FontAwesome5 from API, fallback to MaterialIcons
+  const renderMenuIcon = (machucnang: string, tenanh?: string, size = 24) => {
+    const faName = parseFaIcon(tenanh);
+    if (faName && faHas(faName)) {
+      return (
+        <FontAwesome5
+          name={faName as any}
+          size={size - 2}
+          color="#FFFFFF"
+          style={styles.menuIcon}
+          solid={false}
+        />
+      );
+    }
+    const fallbackMi = faName ? faToMaterialFallback[faName] : null;
+    const miName = fallbackMi || getIconName(machucnang, tenanh || '');
+    return (
+      <MaterialIcons
+        name={miName as any}
+        size={size}
+        color="#FFFFFF"
+        style={styles.menuIcon}
+      />
+    );
+  };
+
   // Map icon names from API
   const getIconName = (machucnang: string, tenanh: string): string => {
     // Map based on MACHUCNANG from API
@@ -178,6 +247,21 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
       
       // Tài chính submenu
       'CSV.HP': 'payments',
+      'CSV.TTHP': 'payment',
+
+      // Hệ thống một cửa
+      'SV.GYC': 'support-agent',
+      'CSV.HTMC': 'support-agent',
+
+      // Văn bản
+      'CSV.VB': 'folder',
+      'CSV.vb': 'folder',
+      'CSVVB': 'folder',
+      'CSV.vbqd': 'description',
+
+      // Góc học tập - bổ sung
+      'CSV.HXTN': 'workspace-premium',
+      'DKCND': 'verified',
     };
     
     return iconMap[machucnang] || 'circle';
@@ -203,40 +287,44 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
       'CSV.TCDAKY': 'RegistrationResult',
       'CSV.DAKY': 'CourseRegistration', // Thêm mapping cho đăng ký học
       'CSV.DKH': 'RegistrationMenu', // Menu đăng ký trực tuyến
+      'DKCND': 'GradeRecognition', // Đăng ký công nhận điểm
+      'CSV.HXTN': 'GraduationApplication', // Xét tốt nghiệp
+      'CSV.NVON': 'WishlistRegistration', // Đăng ký nguyện vọng
+      'CSVDKDH': 'StudyOrientation', // Đăng ký định hướng học tập
+      'CSVDKTMT': 'ExamRetake', // Đăng ký thi lại
+      'SV.GYC': 'OneStopService', // Hệ thống một cửa
+      'CSV.TTHP': 'OnlinePayment', // Thanh toán trực tuyến (học phí)
+      'CSV.vbqd': 'Document', // Văn bản, quy định, biểu mẫu
     };
     
     return screenMap[machucnang] || null;
   };
 
   const handleMenuPress = (item: any) => {
-    // Nếu có children, toggle expand
     if (item.children && item.children.length > 0) {
       setExpandedMenus(prev => ({
         ...prev,
         [item.ID]: !prev[item.ID],
       }));
     } else {
-      // Nếu không có children, navigate
       const screenName = getScreenName(item.MACHUCNANG, item.DUONGDANHIENTHI);
-      if (screenName) {
-        handleClose();
-        setTimeout(() => {
-          navigation.navigate(screenName);
-        }, 50);
+      if (!screenName) {
+        console.log('[CustomDrawer] No mapping for menu:', item.MACHUCNANG, '-', item.TENCHUCNANG);
+        return;
       }
+      handleClose();
+      setTimeout(() => navigation.navigate(screenName), 50);
     }
   };
 
   const handleSubMenuPress = (subItem: any) => {
     const screenName = getScreenName(subItem.MACHUCNANG, subItem.DUONGDANHIENTHI);
-    if (screenName) {
-      handleClose();
-      setTimeout(() => {
-        navigation.navigate(screenName);
-      }, 50);
-    } else {
-      // console.log('[CustomDrawer] No screen mapping for:', subItem.MACHUCNANG);
+    if (!screenName) {
+      console.log('[CustomDrawer] No mapping for submenu:', subItem.MACHUCNANG, '-', subItem.TENCHUCNANG);
+      return;
     }
+    handleClose();
+    setTimeout(() => navigation.navigate(screenName), 50);
   };
 
   const handleLogout = () => {
@@ -326,12 +414,7 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
                           activeOpacity={0.7}
                         >
                           <View style={styles.menuItemContent}>
-                            <MaterialIcons
-                              name={getIconName(item.MACHUCNANG, item.TENANH) as any}
-                              size={24}
-                              color="#FFFFFF"
-                              style={styles.menuIcon}
-                            />
+                            {renderMenuIcon(item.MACHUCNANG, item.TENANH, 24)}
                             <Text style={styles.menuText}>{item.TENCHUCNANG}</Text>
                           </View>
                           {item.children && item.children.length > 0 && (

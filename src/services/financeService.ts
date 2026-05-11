@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Function để đợi token sẵn sàng
 const waitForToken = async (maxAttempts = 10, delay = 500): Promise<string> => {
@@ -96,7 +97,7 @@ export interface FinanceSummary {
 }
 
 class FinanceService {
-  private baseUrl = 'https://iu.cmcu.edu.vn/taichinhapi/api';
+  private baseUrl = API_HOSTS.taiChinh;
   private financeCache: Map<string, { data: FinanceSummary; timestamp: number }> = new Map();
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 phút
 
@@ -265,7 +266,7 @@ class FinanceService {
 
       const encryptionKey = 'DSA4BRIKKS4gLxEpICgPLjEP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/taichinhapi/api/TC_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.taiChinh}/TC_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -319,7 +320,7 @@ class FinanceService {
 
       const encryptionKey = 'DSA4BRIKKS4gLwUgDy4x';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/taichinhapi/api/TC_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.taiChinh}/TC_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -373,7 +374,7 @@ class FinanceService {
 
       const encryptionKey = 'DSA4BRIKKS4gLwwoJC8P';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/taichinhapi/api/TC_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.taiChinh}/TC_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -427,7 +428,7 @@ class FinanceService {
 
       const encryptionKey = 'DSA4BRIKKS4gLwUgEzQ1';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/taichinhapi/api/TC_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.taiChinh}/TC_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -483,7 +484,7 @@ class FinanceService {
 
       const encryptionKey = 'DSA4BRIKKS4gLwU0Aik0LyYP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/taichinhapi/api/TC_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.taiChinh}/TC_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -539,7 +540,7 @@ class FinanceService {
 
       const encryptionKey = 'DSA4BRIRKSgkNAUgFSk0';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/taichinhapi/api/TC_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.taiChinh}/TC_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -595,7 +596,7 @@ class FinanceService {
 
       const encryptionKey = 'DSA4BRIRKSgkNAUgEzQ1';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/taichinhapi/api/TC_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.taiChinh}/TC_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -651,7 +652,7 @@ class FinanceService {
 
       const encryptionKey = 'DSA4BRIRKSgkNAkuIAUuLwPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/taichinhapi/api/TC_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.taiChinh}/TC_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

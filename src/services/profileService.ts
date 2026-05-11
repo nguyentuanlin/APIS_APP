@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Interface cho thông tin hồ sơ
 export interface ProfileInfo {
@@ -118,7 +119,7 @@ class ProfileService {
 
       const encryptionKey = 'DSA4FSkuLyYVKC8CKSgVKCQ1CS4SLgPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/sinhvienapi/api/SV_Custom/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_Custom/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Interfaces
 export interface ChuongTrinhItem {
@@ -109,7 +110,7 @@ class CurriculumService {
 
       const encryptionKey = 'DSA4BRICKTQuLyYVMygvKQPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/dangkyhocapi/api/DKH_Chung_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.dangKyHoc}/DKH_Chung_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -168,7 +169,7 @@ class CurriculumService {
 
       const encryptionKey = 'DSA4BRIKEh4FIC4VIC4eCikuKAMgNQM0LiIP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/kehoachchuongtrinhapi/api/KHCT_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.keHoachChuongTrinh}/KHCT_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -230,7 +231,7 @@ class CurriculumService {
 
       const encryptionKey = 'DSA4BRIKEh4FIC4VIC4eCS4iESkgLx4CFR4RAwPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/kehoachchuongtrinhapi/api/KHCT_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.keHoachChuongTrinh}/KHCT_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

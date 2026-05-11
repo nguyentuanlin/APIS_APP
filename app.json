@@ -11,7 +11,15 @@
     "plugins": [
       "expo-dev-client",
       "expo-asset",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/logo.PNG",
+          "color": "#3B82F6",
+          "defaultChannel": "default"
+        }
+      ]
     ],
     "splash": {
       "image": "./assets/logo.PNG",
@@ -25,14 +33,18 @@
       "supportsTablet": true,
       "bundleIdentifier": "com.tlu.studentportal",
       "newArchEnabled": false,
+      "googleServicesFile": "./GoogleService-Info.plist",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "UIBackgroundModes": ["remote-notification"]
       }
     },
     "android": {
       "package": "com.tlu.studentportal",
       "newArchEnabled": false,
       "softwareKeyboardLayoutMode": "resize",
+      "googleServicesFile": "./google-services.json",
+      "permissions": ["NOTIFICATIONS", "POST_NOTIFICATIONS"],
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo.PNG",
         "backgroundColor": "#ffffff"
@@ -43,9 +55,9 @@
       "eas": {
         "projectId": "fc471311-b7e2-49c0-9223-5a79bb65667c"
       },
-      "EXPO_PUBLIC_AZURE_AD_TENANT_ID": "67f466ec-d460-4f90-9465-f88465e460ef",
-      "EXPO_PUBLIC_AZURE_AD_CLIENT_ID": "0f263b0c-86ad-46c8-a583-0381ec2c8be3",
-      "EXPO_PUBLIC_AZURE_AD_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/callback/azure-ad"
+      "EXPO_PUBLIC_AZURE_AD_TENANT_ID": "f8cdef31-a31e-4b4a-93e4-5f571e91255a",
+      "EXPO_PUBLIC_AZURE_AD_CLIENT_ID": "aa70c3d3-8d84-4f24-8a4c-eecd75dff0b8",
+      "EXPO_PUBLIC_AZURE_AD_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/azure-ad"
     }
   }
 }

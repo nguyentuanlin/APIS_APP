@@ -46,10 +46,9 @@ const RegistrationMenuScreen = () => {
     const menuMapping: { [key: string]: string } = {
       'CSV.DAKY': 'CourseRegistration', // Đăng ký học
       'CSV.NVON': 'WishlistRegistration', // Đăng ký nguyện vọng
-      'CSVXEDM': 'WishlistResults', // Xem kết quả đăng ký NV
-      'CSV.TCDAKY': 'RegistrationResults', // Tra cứu kết quả đăng ký
-      'CSVDKDH': 'OrientationRegistration', // Đăng ký định hướng ĐT
-      'CSVDKTMT': 'ExamRegistration', // Đăng ký thi
+      'CSV.TCDAKY': 'RegistrationResult', // Tra cứu kết quả đăng ký
+      'CSVDKDH': 'StudyOrientation', // Đăng ký định hướng học tập
+      'CSVDKTMT': 'ExamRetake', // Đăng ký thi lại
     };
 
     const screenName = menuMapping[item.MACHUCNANG];

@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Interfaces
 export interface KeHoachItem {
@@ -84,7 +85,7 @@ class ConfirmationService {
 
       const encryptionKey = 'DSA4BRIKJAkuICIp';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/xulyhocvuapi/api/XLHV_RL_TinhToan_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.xuLyHocVu}/XLHV_RL_TinhToan_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -144,7 +145,7 @@ class ConfirmationService {
 
       const encryptionKey = 'CigkLBUzIAkuIC8VKSAvKQPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/tuyensinhapi/api/TS_KS_KeHoach_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.tuyenSinh}/TS_KS_KeHoach_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -188,7 +189,7 @@ class ConfirmationService {
       const dataId = `${userId}${keHoachId}2E2AB291141C4C24A74227B30011CB0D`;
 
       const response = await fetch(
-        `https://iu.cmcu.edu.vn/sinhvienapi/api/SV_Files/LayDanhSach?` +
+        `${API_HOSTS.sinhVien}/SV_Files/LayDanhSach?` +
         `action=SV_Files/LayDanhSach&` +
         `strDuLieu_Id=${dataId}&` +
         `strChucNang_Id=DAC468818D094C01A36A5FD220EF40BB&` +

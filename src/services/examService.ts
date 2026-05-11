@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { API_HOSTS } from '../config/apiHosts';
 
-const BASE_URL = 'https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin';
+const BASE_URL = `${API_HOSTS.sinhVien}/SV_ThongTin`;
 
 // Utility function để đợi token sẵn sàng
 const waitForToken = async (maxAttempts = 10, delay = 500): Promise<string> => {

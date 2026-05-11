@@ -16,7 +16,9 @@ import { useNavigation } from '@react-navigation/native';
 import { useAuth } from '../contexts/AuthContext';
 import CustomDrawer from '../components/CustomDrawer';
 import DashboardShortcuts from '../components/DashboardShortcuts';
+import NotificationModal from '../components/NotificationModal';
 import { scheduleService, ScheduleItem, StudentInfo } from '../services/scheduleService';
+import { fcmService } from '../services/fcmService';
 
 const { width } = Dimensions.get('window');
 
@@ -29,6 +31,15 @@ const HomeScreen = () => {
   const [studentInfo, setStudentInfo] = useState<StudentInfo | null>(null);
   const [loadingSchedule, setLoadingSchedule] = useState(true);
   const [loadingStudentInfo, setLoadingStudentInfo] = useState(true);
+  const [showNotiModal, setShowNotiModal] = useState(false);
+  const [unreadNoti, setUnreadNoti] = useState(0);
+
+  useEffect(() => {
+    const unsub = fcmService.subscribe((_inbox, unread) => {
+      setUnreadNoti(unread);
+    });
+    return unsub;
+  }, []);
 
   // Function để lấy lời chào theo thời gian Việt Nam
   const getGreetingByTime = () => {
@@ -128,7 +139,7 @@ const HomeScreen = () => {
       subtitle: 'Khóa học trực tuyến',
       icon: 'school',
       color: '#10B981',
-      screen: 'Learning',
+      screen: 'GradeLookup',
     },
     {
       id: 'finance',
@@ -397,14 +408,18 @@ const HomeScreen = () => {
         {/* Top Right Action Buttons */}
         <View style={styles.topActionsContainer}>
           <TouchableOpacity
-            onPress={() => navigation.navigate('News' as never)}
+            onPress={() => setShowNotiModal(true)}
             style={styles.topActionButton}
             activeOpacity={0.8}
           >
             <MaterialIcons name="notifications" size={22} color="#FFFFFF" />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.badgeText}>3</Text>
-            </View>
+            {unreadNoti > 0 && (
+              <View style={styles.notificationBadge}>
+                <Text style={styles.badgeText}>
+                  {unreadNoti > 99 ? '99+' : unreadNoti}
+                </Text>
+              </View>
+            )}
           </TouchableOpacity>
           
           <TouchableOpacity
@@ -521,7 +536,7 @@ const HomeScreen = () => {
           
           <TouchableOpacity 
             style={styles.quickActionButton}
-            onPress={() => navigation.navigate('Learning' as never)}
+            onPress={() => navigation.navigate('GradeLookup' as never)}
           >
             <View style={[styles.quickActionIconContainer, { backgroundColor: '#10B981' }]}>
               <MaterialIcons name="school" size={26} color="#FFFFFF" />
@@ -536,6 +551,12 @@ const HomeScreen = () => {
         visible={showDrawer}
         onClose={() => setShowDrawer(false)}
         navigation={navigation}
+      />
+
+      {/* Notification Popup */}
+      <NotificationModal
+        visible={showNotiModal}
+        onClose={() => setShowNotiModal(false)}
       />
     </View>
   );

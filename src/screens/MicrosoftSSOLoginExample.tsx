@@ -8,6 +8,7 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { MicrosoftSSOWebView } from '../components/MicrosoftSSOWebView';
 import { microsoftSSOService, MicrosoftUserInfo } from '../services/microsoftSSOService';
+import { API_HOSTS } from '../config/apiHosts';
 
 export const MicrosoftSSOLoginExample = () => {
   const [showMicrosoftSSO, setShowMicrosoftSSO] = useState(false);
@@ -28,7 +29,7 @@ export const MicrosoftSSOLoginExample = () => {
       const accessToken = await microsoftSSOService.getAccessToken();
       
       // Call API backend của bạn
-      const response = await fetch('https://iu.cmcu.edu.vn/cmsapi/api/auth/microsoft-sso', {
+      const response = await fetch(`${API_HOSTS.cms}/auth/microsoft-sso`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

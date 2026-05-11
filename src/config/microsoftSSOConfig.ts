@@ -48,8 +48,8 @@ const getEnvValue = (key: string, fallback: string = ''): string => {
 
 export const MICROSOFT_SSO_CONFIG: MicrosoftSSOConfig = {
   // Thông tin từ Azure Portal
-  clientId: getEnvValue('EXPO_PUBLIC_AZURE_AD_CLIENT_ID', '0f263b0c-86ad-46c8-a583-0381ec2c8be3'),
-  tenantId: getEnvValue('EXPO_PUBLIC_AZURE_AD_TENANT_ID', '67f466ec-d460-4f90-9465-f88465e460ef'),
+  clientId: getEnvValue('EXPO_PUBLIC_AZURE_AD_CLIENT_ID', 'aa70c3d3-8d84-4f24-8a4c-eecd75dff0b8'),
+  tenantId: getEnvValue('EXPO_PUBLIC_AZURE_AD_TENANT_ID', 'f8cdef31-a31e-4b4a-93e4-5f571e91255a'),
   redirectUri: getEnvValue('EXPO_PUBLIC_AZURE_AD_REDIRECT_URI', 'https://cagent.cmcu.edu.vn/api/auth/mobile/azure-ad'),
   
   // Client secret (không nên expose trong mobile app, chỉ dùng cho backend)

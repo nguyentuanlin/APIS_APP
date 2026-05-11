@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Interfaces
 export interface KeHoachDangKy {
@@ -82,6 +83,48 @@ class RegistrationResultService {
     }
   }
 
+  // Lấy danh sách thời gian (học kỳ) sinh viên đã đăng ký
+  async getThoiGianDangKy(): Promise<{ ID: string; THOIGIAN: string }[]> {
+    try {
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+
+      const requestBody = {
+        func: 'pkg_dangkyhoc_thongtin.LayThoiGianDangKyCaNhan',
+        iM: 'AzzSystem',
+        strDaoTao_ThoiGianDaoTao_Id: '',
+        strQLSV_NguoiHoc_Id: userId,
+      };
+
+      const encryptionKey = 'DSA4FSkuKAYoIC8FIC8mCjgCIA8pIC8P';
+      const response = await fetch(
+        `${API_HOSTS.dangKyHoc}/DKH_ThongTin_MH/${encryptionKey}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            A: AE(JSON.stringify(requestBody), encryptionKey),
+          }),
+        }
+      );
+
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const temp = await response.json();
+      if (!temp.Success) throw new Error(temp.Message || 'Lỗi lấy thời gian');
+      if (!temp.Data?.B) return [];
+      const decrypted = AD(temp.Data.B, requestBody.iM);
+      if (!decrypted) return [];
+      const apiData = JSON.parse(decrypted);
+      return Array.isArray(apiData) ? apiData : apiData.Data || [];
+    } catch (error) {
+      console.error('[RegistrationResultService] getThoiGianDangKy:', error);
+      throw error;
+    }
+  }
+
   // Lấy danh sách kế hoạch đăng ký cá nhân
   async getKeHoachDangKyList(thoiGianId: string): Promise<KeHoachDangKy[]> {
     try {
@@ -99,7 +142,7 @@ class RegistrationResultService {
 
       const encryptionKey = 'DSA4BRIKJAkuICIpBSAvJgo4AiAPKSAv';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/dangkyhocapi/api/DKH_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.dangKyHoc}/DKH_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,7 +200,7 @@ class RegistrationResultService {
 
       const encryptionKey = 'DSA4CiQ1EDQgBSAvJgo4DS4xCS4iESkgLwPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/dangkyhocapi/api/DKH_Chung_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.dangKyHoc}/DKH_Chung_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

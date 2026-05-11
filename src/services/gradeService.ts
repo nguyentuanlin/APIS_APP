@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Function để đợi token sẵn sàng
 const waitForToken = async (maxAttempts = 10, delay = 500): Promise<string> => {
@@ -281,7 +282,6 @@ class GradeService {
 
   private async getChuongTrinhId(): Promise<string> {
     try {
-      // Lấy từ student info
       const studentInfoStr = await AsyncStorage.getItem('cached_student_info');
       if (studentInfoStr) {
         const cached = JSON.parse(studentInfoStr);
@@ -289,10 +289,12 @@ class GradeService {
           return cached.data.DAOTAO_TOCHUCCHUONGTRINH_ID;
         }
       }
-      
-      // Nếu không có trong cache, trả về empty string
-      // API sẽ tự động lấy dựa vào user ID
-      return '';
+
+      // Cache rỗng -> fetch student info để có chuongTrinhId
+      // (Oracle procedure crash ORA-24338 nếu strDaoTao_ChuongTrinh_Id rỗng)
+      const { scheduleService } = await import('./scheduleService');
+      const info = await scheduleService.getStudentInfo();
+      return info?.DAOTAO_TOCHUCCHUONGTRINH_ID || '';
     } catch (error) {
       console.warn('[GradeService] ⚠️ Could not get program ID:', error);
       return '';
@@ -320,7 +322,7 @@ class GradeService {
       const token = await this.getAuthToken();
       
       const response = await fetch(
-        'https://iu.cmcu.edu.vn/cmsapi/api/CMS_DanhMucThuocTinh/LayDanhSachDuLieuTheoBangDM?strMaBangDanhMuc=CHUN.DMTT&strTieuChiSapXep=&dTrangThai=1',
+        `${API_HOSTS.cms}/CMS_DanhMucThuocTinh/LayDanhSachDuLieuTheoBangDM?strMaBangDanhMuc=CHUN.DMTT&strTieuChiSapXep=&dTrangThai=1`,
         {
           method: 'GET',
           headers: {
@@ -385,7 +387,7 @@ class GradeService {
 
       const encryptionKey = 'CiQ1EDQgCS4iFSAxAiAPKSAv';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -686,7 +688,7 @@ class GradeService {
 
       const encryptionKey = 'DSA4CiQ1EDQgFSgiKQ00OBUpJC4KKS4o';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -831,7 +833,7 @@ class GradeService {
       // console.log('[GradeService] Calling API...');
 
       const response = await fetch(
-        `https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`,
+        `${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`,
         {
           method: 'POST',
           headers: {
@@ -906,7 +908,7 @@ class GradeService {
       // console.log('[GradeService] Calling API...');
 
       const response = await fetch(
-        `https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`,
+        `${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`,
         {
           method: 'POST',
           headers: {
@@ -984,7 +986,7 @@ class GradeService {
       // console.log('[GradeService] Calling API...');
 
       const response = await fetch(
-        `https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`,
+        `${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`,
         {
           method: 'POST',
           headers: {
@@ -1060,7 +1062,7 @@ class GradeService {
       // console.log('[GradeService] Calling API...');
 
       const response = await fetch(
-        `https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`,
+        `${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`,
         {
           method: 'POST',
           headers: {

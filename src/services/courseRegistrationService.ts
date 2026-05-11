@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Interfaces
 export interface RegistrationPlan {
@@ -104,50 +105,52 @@ class CourseRegistrationService {
     }
   }
 
+  // Lấy chương trình đào tạo của sinh viên (động, dùng cho các API yêu cầu chuongTrinhId)
+  private async getChuongTrinhId(): Promise<string> {
+    try {
+      const cached = await AsyncStorage.getItem('cached_student_info');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed.data?.DAOTAO_TOCHUCCHUONGTRINH_ID) {
+          return parsed.data.DAOTAO_TOCHUCCHUONGTRINH_ID;
+        }
+      }
+      const { scheduleService } = await import('./scheduleService');
+      const info = await scheduleService.getStudentInfo();
+      return info?.DAOTAO_TOCHUCCHUONGTRINH_ID || '';
+    } catch {
+      return '';
+    }
+  }
+
   // Lấy danh sách kế hoạch đăng ký học
   async getRegistrationPlans(): Promise<RegistrationPlan[]> {
     try {
-      // Tạm thời return mock data với ID thực từ API log
-      console.log('[CourseRegistrationService] Using hardcoded plan ID from API logs');
-      
-      const mockPlans: RegistrationPlan[] = [
-        {
-          ID: 'B209914DFCD540AEBC0BA55E27947CF8', // ID thực từ API log
-          TEN: 'Kế hoạch đăng ký học kỳ 2 năm học 2025-2026',
-          NGAYBATDAU: '01/04/2026',
-          NGAYKETTHUC: '30/04/2026',
-          TRANGTHAI: 1,
-          MOTA: 'Đăng ký học phần cho kỳ 2 năm học 2025-2026'
-        }
-      ];
-      
-      return mockPlans;
-
-      // TODO: Tìm API thực tế để lấy danh sách kế hoạch đăng ký
-      // Có thể sử dụng API tương tự như registrationResultService
-      /*
       const token = await this.getAuthToken();
       const userId = await this.getUserId();
+      const chuongTrinhId = await this.getChuongTrinhId();
 
+      if (!chuongTrinhId) {
+        throw new Error('Không xác định được chương trình đào tạo của sinh viên');
+      }
+
+      const encryptionKey = 'DSA4BRIKJAkuICIpBSAvJgo4CS4i';
       const requestBody = {
-        func: 'pkg_dangkyhoc_thongtin.LayDSKeHoachDangKyCaNhan',
+        func: 'pkg_dangkyhoc_chung2.LayDSKeHoachDangKyHoc',
         iM: 'AzzSystem',
-        strNguoiThucHien_Id: userId,
+        strDaoTao_ChuongTrinh_Id: chuongTrinhId,
         strQLSV_NguoiHoc_Id: userId,
-        strDaoTao_ThoiGianDaoTao_Id: '', // Cần xác định
-        strChucNang_Id: '6D01F8288B3146BAA9864693699E6CD0',
+        strNguoiThucHien_Id: userId,
       };
 
-      const encryptionKey = 'DSA4BRIKJAkuICIpBSAvJgo4AiAPKSAv';
-      
-      const response = await fetch(`https://iu.cmcu.edu.vn/dangkyhocapi/api/DKH_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.nhanSu}/NS_DKH_CHUNG2_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          A: AE(JSON.stringify(requestBody), encryptionKey)
+          A: AE(JSON.stringify(requestBody), encryptionKey),
         }),
       });
 
@@ -156,16 +159,24 @@ class CourseRegistrationService {
       }
 
       const temp = await response.json();
-      
       if (!temp.Success) {
         throw new Error(temp.Message || 'Lỗi khi lấy danh sách kế hoạch đăng ký');
       }
 
       const decryptedData = AD(temp.Data.B, requestBody.iM);
+      if (!decryptedData) return [];
+
       const apiData = JSON.parse(decryptedData);
-      
-      return Array.isArray(apiData) ? apiData : (apiData.Data || []);
-      */
+      const rawList = Array.isArray(apiData) ? apiData : apiData.Data || [];
+
+      return rawList.map((e: any) => ({
+        ID: e.ID,
+        TEN: e.TENKEHOACH || e.MAKEHOACH || e.TEN || '',
+        NGAYBATDAU: e.NGAYBATDAU || '',
+        NGAYKETTHUC: e.NGAYKETTHUC || '',
+        TRANGTHAI: e.TRANGTHAI ?? 1,
+        MOTA: e.MAKEHOACH ? `${e.MAKEHOACH} - ${e.TENKEHOACH || ''}` : e.MOTA || '',
+      }));
     } catch (error) {
       console.error('[CourseRegistrationService] Error fetching registration plans:', error);
       throw error;
@@ -182,7 +193,7 @@ class CourseRegistrationService {
         func: 'pkg_dangkyhoc_chung3.LayDSHocPhanDangToChuc',
         iM: 'AzzSystem',
         strDangKy_KeHoachDangKy_Id: planId,
-        strDaoTao_ChuongTrinh_Id: 'AC3FE2F91E9A44F2A553BFE40ADCEF24',
+        strDaoTao_ChuongTrinh_Id: await this.getChuongTrinhId(),
         strQLSV_NguoiHoc_Id: userId,
         strNguoiThucHien_Id: userId,
         strChucNang_Id: '6D01F8288B3146BAA9864693699E6CD0',
@@ -190,7 +201,7 @@ class CourseRegistrationService {
 
       const encryptionKey = 'DSA4BRIJLiIRKSAvBSAvJhUuAik0IgPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/xulyhocvuapi/api/XLHV_DKH_CHUNG3_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.xuLyHocVu}/XLHV_DKH_CHUNG3_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -231,7 +242,7 @@ class CourseRegistrationService {
         func: 'pkg_dangkyhoc_chung4.LayDSLopHocPhanDangToChuc',
         iM: 'AzzSystem',
         strDangKy_KeHoachDangKy_Id: planId,
-        strDaoTao_ChuongTrinh_Id: 'AC3FE2F91E9A44F2A553BFE40ADCEF24',
+        strDaoTao_ChuongTrinh_Id: await this.getChuongTrinhId(),
         strDaoTao_HocPhan_Id: courseId,
         strQLSV_NguoiHoc_Id: userId,
         strNguoiThucHien_Id: userId,
@@ -246,7 +257,7 @@ class CourseRegistrationService {
 
       const encryptionKey = 'DSA4BRINLjEJLiIRKSAvBSAvJhUuAik0IgPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/totnghiepapi/api/TN_DKH_CHUNG4_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.totNghiep}/TN_DKH_CHUNG4_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -287,7 +298,7 @@ class CourseRegistrationService {
         func: 'PKG_DANGKYHOC_CHUNG6.LayThuHocTheoHocPhan',
         iM: 'AzzSystem',
         strDangKy_KeHoachDangKy_Id: planId,
-        strDaoTao_ChuongTrinh_Id: 'AC3FE2F91E9A44F2A553BFE40ADCEF24',
+        strDaoTao_ChuongTrinh_Id: await this.getChuongTrinhId(),
         strDaoTao_HocPhan_Id: courseId,
         strQLSV_NguoiHoc_Id: userId,
         strNguoiThucHien_Id: userId,
@@ -296,7 +307,7 @@ class CourseRegistrationService {
 
       const encryptionKey = 'DSA4FSk0CS4iFSkkLgkuIhEpIC8P';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/xulyhocvuapi/api/XLHV_DKH_CHUNG6_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.xuLyHocVu}/XLHV_DKH_CHUNG6_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -337,7 +348,7 @@ class CourseRegistrationService {
         func: 'PKG_DANGKYHOC_CHUNG6.LayGiangVienTheoHocPhan',
         iM: 'AzzSystem',
         strDangKy_KeHoachDangKy_Id: planId,
-        strDaoTao_ChuongTrinh_Id: 'AC3FE2F91E9A44F2A553BFE40ADCEF24',
+        strDaoTao_ChuongTrinh_Id: await this.getChuongTrinhId(),
         strDaoTao_HocPhan_Id: courseId,
         strQLSV_NguoiHoc_Id: userId,
         strNguoiThucHien_Id: userId,
@@ -346,7 +357,7 @@ class CourseRegistrationService {
 
       const encryptionKey = 'DSA4BiggLyYXKCQvFSkkLgkuIhEpIC8P';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/xulyhocvuapi/api/XLHV_DKH_CHUNG6_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.xuLyHocVu}/XLHV_DKH_CHUNG6_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -470,7 +481,7 @@ class CourseRegistrationService {
       console.log('[CourseRegistrationService] Calling schedule API with classId:', classId);
       console.log('[CourseRegistrationService] Request body:', requestBody);
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/quanlytuyensinhapi/api/TS_DKH_CHUNG7_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.quanLyTuyenSinh}/TS_DKH_CHUNG7_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

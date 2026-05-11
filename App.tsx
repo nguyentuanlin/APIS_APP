@@ -6,6 +6,7 @@
   // Import final crypto implementation
   import { FinalCrypto } from './src/utils/finalCrypto';
   import { scheduleService } from './src/services/scheduleService';
+  import { fcmService } from './src/services/fcmService';
   import LoginScreen from './src/screens/LoginScreen';
   import HomeScreen from './src/screens/HomeScreen';
   
@@ -28,6 +29,14 @@
   import RegistrationResultScreen from './src/screens/RegistrationResultScreen';
   import CourseRegistrationScreen from './src/screens/CourseRegistrationScreen';
   import CourseClassDetailScreen from './src/screens/CourseClassDetailScreen';
+  import GradeRecognitionScreen from './src/screens/GradeRecognitionScreen';
+  import GraduationApplicationScreen from './src/screens/GraduationApplicationScreen';
+  import WishlistRegistrationScreen from './src/screens/WishlistRegistrationScreen';
+  import StudyOrientationScreen from './src/screens/StudyOrientationScreen';
+  import ExamRetakeScreen from './src/screens/ExamRetakeScreen';
+  import OneStopServiceScreen from './src/screens/OneStopServiceScreen';
+  import OnlinePaymentScreen from './src/screens/OnlinePaymentScreen';
+  import DocumentScreen from './src/screens/DocumentScreen';
   import { ActivityIndicator, View, StyleSheet } from 'react-native';
   const Stack = createNativeStackNavigator();
 
@@ -39,6 +48,8 @@
       if (isAuthenticated && user) {
         // Preload schedule data ngầm để cải thiện performance
         scheduleService.preloadScheduleData().catch(console.warn);
+        // Đăng ký nhận push notification (FCM) sau khi đã đăng nhập
+        fcmService.init(user).catch(err => console.warn('[FCM] init failed:', err));
       }
     }, [isAuthenticated, user]);
 
@@ -70,6 +81,14 @@
               <Stack.Screen name="RegistrationResult" component={RegistrationResultScreen} />
               <Stack.Screen name="CourseRegistration" component={CourseRegistrationScreen} />
               <Stack.Screen name="CourseClassDetail" component={CourseClassDetailScreen} />
+              <Stack.Screen name="GradeRecognition" component={GradeRecognitionScreen} />
+              <Stack.Screen name="GraduationApplication" component={GraduationApplicationScreen} />
+              <Stack.Screen name="WishlistRegistration" component={WishlistRegistrationScreen} />
+              <Stack.Screen name="StudyOrientation" component={StudyOrientationScreen} />
+              <Stack.Screen name="ExamRetake" component={ExamRetakeScreen} />
+              <Stack.Screen name="OneStopService" component={OneStopServiceScreen} />
+              <Stack.Screen name="OnlinePayment" component={OnlinePaymentScreen} />
+              <Stack.Screen name="Document" component={DocumentScreen} />
               <Stack.Screen name="Settings" component={SettingsScreen} />
             </>
           ) : (

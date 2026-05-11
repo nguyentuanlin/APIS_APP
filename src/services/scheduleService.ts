@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
-const BASE_URL = 'https://iu.cmcu.edu.vn/sinhvienapi/api/SV_Custom';
+import { API_HOSTS } from '../config/apiHosts';
+const BASE_URL = `${API_HOSTS.sinhVien}/SV_Custom`;
 
 // Cache configuration
 const CACHE_DURATION = 5 * 60 * 1000; // 5 phút
@@ -243,7 +244,7 @@ class ScheduleService {
         iM: 'ChaoLong'
       };
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/DSA4BRINKCIpAiAPKSAv`, {
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/DSA4BRINKCIpAiAPKSAv`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -308,31 +309,30 @@ class ScheduleService {
         return storageCache.data;
       }
 
-      // Không có cache, gọi API
-      // console.log('[ScheduleService] 🌐 Fetching student info from API');
-      const token = await this.getAuthToken();
-      
-      const response = await fetch(`${BASE_URL}/LayThongTinChuongTrinhHoc`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-      });
+      // Ưu tiên POST encrypted (hoạt động trên cả CMCU & EAUT)
+      let studentData = await this.fetchStudentInfoEncrypted();
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+      // Fallback 1: GET cũ (chỉ CMCU có)
+      if (!studentData) {
+        const token = await this.getAuthToken();
+        const response = await fetch(`${BASE_URL}/LayThongTinChuongTrinhHoc`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const result: ApiResponse<StudentInfo> = await response.json();
+          if (result.Success) {
+            studentData = result.Data?.[0] || null;
+          }
+        }
       }
 
-      const result: ApiResponse<StudentInfo> = await response.json();
-      
-      if (!result.Success) {
-        throw new Error(result.Message || 'Lỗi khi lấy thông tin sinh viên');
+      // Fallback 2: profileService (chỉ có info hồ sơ, không có chuongTrinh ID)
+      if (!studentData) {
+        studentData = await this.fetchStudentInfoFromProfile();
       }
 
-      const studentData = result.Data?.[0] || null;
-      
       if (studentData) {
-        // Lưu vào cache
         this.studentInfoCache = {
           data: studentData,
           timestamp: Date.now(),
@@ -342,8 +342,89 @@ class ScheduleService {
 
       return studentData;
     } catch (error) {
-      console.error('[ScheduleService] ❌ Error fetching student info:', error);
-      throw error;
+      console.warn('[ScheduleService] ⚠️ Could not fetch student info:', error);
+      return null;
+    }
+  }
+
+  private async fetchStudentInfoEncrypted(): Promise<StudentInfo | null> {
+    try {
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+
+      const encryptionKey = 'DSA4FSkuLyYVKC8CKTQuLyYVMygvKQkuIgPP';
+      const requestBody = {
+        func: 'pkg_congthongtin_hssv_thongtin.LayThongTinChuongTrinhHoc',
+        iM: 'AzzSystem',
+        strChucNang_Id: 'B46109CD333D4E3DAC50D43E8607ED46',
+        strQLSV_NguoiHoc_Id: userId,
+        strNguoiThucHien_Id: userId,
+      };
+
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          A: AE(JSON.stringify(requestBody), encryptionKey),
+        }),
+      });
+
+      if (!response.ok) return null;
+
+      const temp = await response.json();
+      if (!temp.Success || !temp.Data?.B) return null;
+
+      const decryptedData = AD(temp.Data.B, requestBody.iM);
+      if (!decryptedData) return null;
+
+      const apiData = JSON.parse(decryptedData);
+      const list = Array.isArray(apiData) ? apiData : apiData.Data || [];
+      return list[0] || null;
+    } catch (error) {
+      console.warn('[ScheduleService] ⚠️ Encrypted student info failed:', error);
+      return null;
+    }
+  }
+
+  private async fetchStudentInfoFromProfile(): Promise<StudentInfo | null> {
+    try {
+      const profileService = (await import('./profileService')).default;
+      const profile = await profileService.getProfileInfo();
+      if (!profile) return null;
+
+      return {
+        QLSV_TRANGTHAINGUOIHOC_ID: '',
+        QLSV_TRANGTHAINGUOIHOC_TEN: profile.QLSV_NGUOIHOC_TRANGTHAI || '',
+        QLSV_TRANGTHAINGUOIHOC_MA: '',
+        TTLL_KHICANBAOTINCHOAI_ODAU: '',
+        QLSV_NGUOIHOC_ID: profile.ID,
+        QLSV_NGUOIHOC_NGAYSINH: profile.QLSV_NGUOIHOC_NGAYSINH || '',
+        QLSV_NGUOIHOC_MASO: profile.MASO,
+        QLSV_NGUOIHOC_HODEM: profile.HODEM,
+        QLSV_NGUOIHOC_TEN: profile.TEN,
+        QLSV_NGUOIHOC_GIOITINH: profile.GIOITINH_TEN || '',
+        DAOTAO_TOCHUCCHUONGTRINH_ID: '',
+        DAOTAO_CHUONGTRINH_TEN: profile.NGANH || '',
+        DAOTAO_CHUONGTRINH_MA: profile.MANGANH || '',
+        DAOTAO_LOPQUANLY_ID: '',
+        DAOTAO_LOPQUANLY_TEN: profile.LOP || '',
+        DAOTAO_LOPQUANLY_MA: profile.LOP || '',
+        DAOTAO_KHOADAOTAO_ID: '',
+        DAOTAO_KHOADAOTAO_TEN: profile.KHOADAOTAO || '',
+        DAOTAO_KHOADAOTAO_MA: '',
+        DAOTAO_KHOAQUANLY_ID: '',
+        DAOTAO_KHOAQUANLY_TEN: profile.KHOAQUANLY || '',
+        DAOTAO_KHOAQUANLY_MA: '',
+        DAOTAO_HEDAOTAO_ID: '',
+        DAOTAO_HEDAOTAO_TEN: profile.HEDAOTAO || '',
+        DAOTAO_HEDAOTAO_MA: '',
+      };
+    } catch (error) {
+      console.warn('[ScheduleService] ⚠️ Profile fallback also failed:', error);
+      return null;
     }
   }
 

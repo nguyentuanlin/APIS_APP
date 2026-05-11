@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { AE, AD } from '../../crypto';
+import { API_HOSTS } from '../config/apiHosts';
 
 // Interfaces
 export interface AttendanceRecord {
@@ -129,7 +130,7 @@ class AttendanceService {
 
       const encryptionKey = 'DSA1CiQ1EDQgBSgkLAUgLykP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +146,7 @@ class AttendanceService {
       }
 
       const temp = await response.json();
-      
+
       if (!temp.Success) {
         throw new Error(temp.Message || 'Lỗi khi lấy kết quả điểm danh');
       }
@@ -185,7 +186,7 @@ class AttendanceService {
 
       const encryptionKey = 'DSA1CiQ1EDQgBSgkLBA0IBUzKC8p';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/sinhvienapi/api/SV_ThongTin_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -201,7 +202,7 @@ class AttendanceService {
       }
 
       const temp = await response.json();
-      
+
       if (!temp.Success) {
         throw new Error(temp.Message || 'Lỗi khi lấy điểm quá trình');
       }
@@ -241,7 +242,7 @@ class AttendanceService {
 
       const encryptionKey = 'DSA4DSgiKRU0IC8VKSQuDS4xCS4iESkgLwPP';
       
-      const response = await fetch(`https://iu.cmcu.edu.vn/dangkyhocapi/api/DKH_Chung_MH/${encryptionKey}`, {
+      const response = await fetch(`${API_HOSTS.dangKyHoc}/DKH_Chung_MH/${encryptionKey}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -311,7 +312,7 @@ class AttendanceService {
       const encryptionKey = 'DSA4BRIFIC8mCjgJLiIecwPP';
 
       const response = await fetch(
-        `https://iu.cmcu.edu.vn/nhansuapi/api/NS_ThongTinCanBo_MH/${encryptionKey}`,
+        `${API_HOSTS.nhanSu}/NS_ThongTinCanBo_MH/${encryptionKey}`,
         {
           method: 'POST',
           headers: {
