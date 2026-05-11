@@ -11,6 +11,31 @@ const CACHE_KEYS = {
   NEWS_CATEGORIES: 'cached_news_categories',
 };
 
+// IDs theo từng cổng. Web NewLogin / loginVT phân biệt SV vs CB bằng strChung_UngDung_Id
+// (UUID của ứng dụng trong bảng Chung_UngDung) và strChucNang_Id (UUID của chức năng "Tin tức"
+// trong bảng Chung_ChucNang). Cùng endpoint TS_TinTuc_MH, server tự lọc tin theo 2 trường này.
+const PORTAL_IDS = {
+  student: {
+    ungDungId: '80CF9E16C2D74F46A1ECE73B7C119A8F',
+    chucNangTinTucId: '15346B6F33834D7897591527289DB0F8',
+  },
+  lecturer: {
+    ungDungId: 'B0B172E252D24251A5E650D38AC901A2',
+    chucNangTinTucId: '2CBC5A21E2184DC191542E8C4F3408FE',
+  },
+} as const;
+
+const getPortalIds = async (): Promise<typeof PORTAL_IDS.student> => {
+  try {
+    const raw = await AsyncStorage.getItem('userData');
+    if (raw) {
+      const u = JSON.parse(raw);
+      if (u?.userPortal === 'lecturer') return PORTAL_IDS.lecturer;
+    }
+  } catch {}
+  return PORTAL_IDS.student;
+};
+
 // Utility function để đợi token sẵn sàng
 const waitForToken = async (maxAttempts = 10, delay = 500): Promise<string> => {
   for (let i = 0; i < maxAttempts; i++) {
@@ -217,12 +242,13 @@ class NewsService {
       // console.log('[NewsService] 🔑 Token:', token ? 'exists' : 'missing');
       // console.log('[NewsService] 👤 User ID:', userId);
       
+      const ids = await getPortalIds();
       const requestBody = {
         func: 'pkg_tintuc.LayDSTinTuc_BangTin_NguoiDung',
         iM: 'AzzSystem',
-        strChucNang_Id: '15346B6F33834D7897591527289DB0F8',
+        strChucNang_Id: ids.chucNangTinTucId,
         strNguoiThucHien_Id: userId,
-        strChung_UngDung_Id: '80CF9E16C2D74F46A1ECE73B7C119A8F',
+        strChung_UngDung_Id: ids.ungDungId,
         strTuKhoa: params?.keyword || '',
         strTuNgay: params?.fromDate || '',
         strDenNgay: params?.toDate || '',
@@ -306,10 +332,11 @@ class NewsService {
       const token = await this.getAuthToken();
       const userId = await this.getUserId();
       
+      const ids = await getPortalIds();
       const requestBody = {
         func: 'pkg_tintuc.LayDSDonViCungCapNguon',
         iM: 'AzzSystem',
-        strChucNang_Id: '15346B6F33834D7897591527289DB0F8',
+        strChucNang_Id: ids.chucNangTinTucId,
         strNguoiThucHien_Id: userId,
         strQLSV_NguoiHoc_Id: userId,
       };
@@ -460,10 +487,11 @@ class NewsService {
       // console.log('[NewsService] 🔑 Token:', token ? 'exists' : 'missing');
       // console.log('[NewsService] 👤 User ID:', userId);
       
+      const ids = await getPortalIds();
       const requestBody = {
         func: 'pkg_tintuc.LayDSTinTuc_BangTin_BinhLuan',
         iM: 'AzzSystem',
-        strChucNang_Id: '15346B6F33834D7897591527289DB0F8',
+        strChucNang_Id: ids.chucNangTinTucId,
         strNguoiThucHien_Id: userId,
         strTinTuc_BangTin_Id: newsId,
         strNguoiDung_Id: '',
@@ -522,10 +550,11 @@ class NewsService {
       const token = await this.getAuthToken();
       const userId = await this.getUserId();
       
+      const ids = await getPortalIds();
       const requestBody = {
         func: 'pkg_tintuc.Them_TinTuc_BangTin_LuotXem',
         iM: 'AzzSystem',
-        strChucNang_Id: '15346B6F33834D7897591527289DB0F8',
+        strChucNang_Id: ids.chucNangTinTucId,
         strNguoiThucHien_Id: userId,
         strTinTuc_BangTin_Id: newsId,
         strDiaChiMayTram: '',

@@ -28,7 +28,7 @@ const LoginScreen = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const [showMicrosoftSSO, setShowMicrosoftSSO] = useState(false);
   const [showGoogleSSO, setShowGoogleSSO] = useState(false);
-  const { login, isLoading: isLoginLoading } = useAuth();
+  const { login, loginWithSSO, isLoading: isLoginLoading } = useAuth();
   const navigation = useNavigation();
   const isLoading = isLoginLoading;
 
@@ -78,14 +78,13 @@ const LoginScreen = () => {
   const handleMicrosoftSSOSuccess = async (userInfo: MicrosoftUserInfo) => {
     setShowMicrosoftSSO(false);
     try {
-      const accessToken = await microsoftSSOService.getAccessToken();
-      if (!accessToken) throw new Error('Không thể lấy access token');
-      Alert.alert(
-        'Đăng nhập thành công',
-        `Chào mừng ${userInfo.name}!\n\nEmail: ${userInfo.email}`,
-      );
+      await loginWithSSO({
+        email: userInfo.email,
+        name: userInfo.name,
+        provider: 'microsoft',
+      });
     } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Không thể kết nối với server');
+      Alert.alert('Lỗi', error.message || 'Không thể tạo phiên SSO');
     }
   };
 
@@ -101,14 +100,16 @@ const LoginScreen = () => {
   const handleGoogleSSOSuccess = async (userInfo: GoogleUserInfo) => {
     setShowGoogleSSO(false);
     try {
-      const accessToken = await googleSSOService.getAccessToken();
-      if (!accessToken) throw new Error('Không thể lấy access token');
-      Alert.alert(
-        'Đăng nhập thành công',
-        `Chào mừng ${userInfo.name}!\n\nEmail: ${userInfo.email}`,
-      );
+      await loginWithSSO({
+        email: userInfo.email,
+        name: userInfo.name,
+        provider: 'google',
+        portalUrl: userInfo.portalUrl,
+        tokenJWT: userInfo.tokenJWT,
+      });
+      // AuthContext setUser → App.tsx tự navigate sang HomeStack qua isAuthenticated
     } catch (error: any) {
-      Alert.alert('Lỗi', error.message || 'Không thể kết nối với server');
+      Alert.alert('Lỗi', error.message || 'Không thể tạo phiên SSO');
     }
   };
 

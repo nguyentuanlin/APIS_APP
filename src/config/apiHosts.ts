@@ -36,6 +36,8 @@ export const API_HOSTS = {
   xuLyHocVu: `${API_HOST}/xulyhocvuapi/api`,
   taiChinh: `${API_HOST}/taichinhapi/api`,
   nhanSu: `${API_HOST}/nhansuapi/api`,
+  thiPhach: `${API_HOST}/thiphachapi/api`,
+  quanLyDiem: `${API_HOST}/quanlydiemapi/api`,
   keHoachChuongTrinh: `${API_HOST}/kehoachchuongtrinhapi/api`,
   quanLyTuyenSinh: `${API_HOST}/quanlytuyensinhapi/api`,
   totNghiep: `${API_HOST}/totnghiepapi/api`,

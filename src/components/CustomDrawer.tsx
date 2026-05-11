@@ -37,10 +37,12 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
   const slideAnim = useRef(new Animated.Value(-280)).current;
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
+  const isLecturer = user?.userPortal === 'lecturer';
+
   // Load student info và menu khi drawer mở
   useEffect(() => {
     if (visible && user) {
-      loadStudentInfo();
+      if (!isLecturer) loadStudentInfo();
       loadMenu();
     }
   }, [visible, user]);
@@ -57,21 +59,30 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
   const loadMenu = async () => {
     try {
       setLoading(true);
+
+      if (isLecturer) {
+        if (!user?.activeRoleId) {
+          setMenuItems([]);
+          return;
+        }
+        const { lecturerService } = await import('../services/lecturerService');
+        const allMenus = await lecturerService.getMenuByRole(user.activeRoleId);
+        const parentMenus = lecturerService.getParentMenus(allMenus);
+        const menuStructure = parentMenus.map((parent) => {
+          const children = lecturerService.getChildMenus(allMenus, parent.ID);
+          return { ...parent, children: children.length > 0 ? children : null };
+        });
+        setMenuItems(menuStructure);
+        return;
+      }
+
       const menuService = (await import('../services/menuService')).default;
       const allMenus = await menuService.getMenuByUser();
       const parentMenus = menuService.getParentMenus(allMenus);
-      
-      // Build menu structure with children
-      const menuStructure = parentMenus.map(parent => {
+      const menuStructure = parentMenus.map((parent) => {
         const children = menuService.getChildMenus(allMenus, parent.ID);
-        // console.log('[CustomDrawer] Parent menu:', parent.TENCHUCNANG, 'MACHUCNANG:', parent.MACHUCNANG);
-        return {
-          ...parent,
-          children: children.length > 0 ? children : null,
-        };
+        return { ...parent, children: children.length > 0 ? children : null };
       });
-      
-      // console.log('[CustomDrawer] Menu structure:', JSON.stringify(menuStructure, null, 2));
       setMenuItems(menuStructure);
     } catch (error) {
       console.error('[CustomDrawer] Error loading menu:', error);
@@ -80,12 +91,25 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
     }
   };
 
+  // Bắt cả UUID thuần và format JWT sub <UUID>;<session>;<timestamp>
+  const looksLikeUuid = (s: string) => /^[0-9A-Fa-f]{32}(;.*)?$/.test(s.trim());
+
   const formatStudentName = () => {
+    if (isLecturer) {
+      const fn = (user?.fullname || '').trim();
+      if (fn && !looksLikeUuid(fn)) return fn;
+      const un = (user?.username || '').trim();
+      if (un && !looksLikeUuid(un) && !un.includes('@')) return un;
+      const em = (user?.email || '').trim();
+      if (em) return em.split('@')[0];
+      return 'Giảng viên';
+    }
     if (!studentInfo) return user?.fullname || user?.username || user?.email || 'Sinh viên';
     return `${studentInfo.QLSV_NGUOIHOC_HODEM} ${studentInfo.QLSV_NGUOIHOC_TEN}`;
   };
 
   const getStudentRole = () => {
+    if (isLecturer) return user?.activeRoleName || 'Cổng cán bộ';
     if (!studentInfo) return 'Sinh viên';
     return `${studentInfo.DAOTAO_LOPQUANLY_TEN} - ${studentInfo.DAOTAO_KHOAQUANLY_TEN}`;
   };
@@ -262,8 +286,40 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
       // Góc học tập - bổ sung
       'CSV.HXTN': 'workspace-premium',
       'DKCND': 'verified',
+
+      // ===== Cổng cán bộ =====
+      'CCB.LICHGIANG': 'event-note',
+      'CCB.TKH': 'event',
+      'CCB.TKHDM': 'event-available',
+      'CCB.TKHDMSV': 'groups',
+      'CCB.TKHDMPH': 'meeting-room',
+      'CCB.TKHNPH': 'meeting-room',
+      'CCB.TKHNPHGV': 'co-present',
+      'CCB.NHTL': 'people',
+      'CCB.KXN': 'fact-check',
+      'CCB.DTDL': 'swap-horiz',
+      'CBB.KLCB': 'work',
+      'CCB.QLD': 'grade',
+      'CCB.NhapDiem': 'edit-note',
+      'CBB.NDDST': 'list-alt',
+      'CCB.NDP': 'inventory',
+      'CCB.NDPK': 'rate-review',
+      'CCB.CKT': 'edit',
+      'CCB.IBD': 'school',
+      'CCB.KXPK': 'visibility',
+      'CCB.TK': 'bar-chart',
+      'CCB.ND.KHT': 'analytics',
+      'CCB.ND.LHP': 'analytics',
+      'CCB.ND.HP': 'analytics',
+      'CCB.PDN': 'show-chart',
+      'CCB.KS': 'rate-review',
+      'CCB.TTUC': 'newspaper',
+      'CCB.VB': 'folder',
+      'CCB.vbqd': 'description',
+      'CCB.XT': 'assignment-ind',
+      'CCB.LCT': 'event-seat',
     };
-    
+
     return iconMap[machucnang] || 'circle';
   };
 
@@ -295,8 +351,16 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
       'SV.GYC': 'OneStopService', // Hệ thống một cửa
       'CSV.TTHP': 'OnlinePayment', // Thanh toán trực tuyến (học phí)
       'CSV.vbqd': 'Document', // Văn bản, quy định, biểu mẫu
+
+      // ===== Cổng cán bộ — chỉ những chức năng đã có screen =====
+      'CCB.TTUC': 'News', // Tin tức (dùng chung với cổng SV)
+      'CBB.NDDST': 'LecturerGradeEntry', // Nhập điểm theo DS thi (lưu ý prefix CBB, không phải CCB)
+      'CCB.NDP': 'LecturerGradeEntryByPhach', // Nhập điểm theo phách
+      'CCB.IBD': 'LecturerStudentInfo', // Xem thông tin học tập, chương trình học sinh viên
+      'CCB.KXPK': 'LecturerPhucKhao', // Khoa xem Phúc Khảo
+      'CCB.NhapDiem': 'LecturerGradeSubmission', // Nhập điểm giảng viên
     };
-    
+
     return screenMap[machucnang] || null;
   };
 

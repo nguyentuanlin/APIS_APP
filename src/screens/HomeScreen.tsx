@@ -421,14 +421,6 @@ const HomeScreen = () => {
               </View>
             )}
           </TouchableOpacity>
-          
-          <TouchableOpacity
-            onPress={() => navigation.navigate('Settings' as never)}
-            style={styles.topActionButton}
-            activeOpacity={0.8}
-          >
-            <MaterialIcons name="settings" size={22} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
       </View>
 

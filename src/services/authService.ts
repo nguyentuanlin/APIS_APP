@@ -172,6 +172,8 @@ interface CmsLoginResponse {
   Id?: any;
 }
 
+export type UserPortal = 'student' | 'lecturer';
+
 export interface User {
   sub: string;
   email: string;
@@ -181,6 +183,9 @@ export interface User {
   roles: string[];
   avatar?: string;
   coverImage?: string;
+  userPortal?: UserPortal;
+  activeRoleId?: string;
+  activeRoleName?: string;
 }
 
 export const authService = {

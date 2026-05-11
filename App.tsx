@@ -9,8 +9,12 @@
   import { fcmService } from './src/services/fcmService';
   import LoginScreen from './src/screens/LoginScreen';
   import HomeScreen from './src/screens/HomeScreen';
-  
-  import SettingsScreen from './src/screens/SettingsScreen';
+  import LecturerHomeScreen from './src/screens/LecturerHomeScreen';
+  import LecturerGradeEntryScreen from './src/screens/LecturerGradeEntryScreen';
+  import LecturerGradeEntryByPhachScreen from './src/screens/LecturerGradeEntryByPhachScreen';
+  import LecturerStudentInfoScreen from './src/screens/LecturerStudentInfoScreen';
+  import LecturerPhucKhaoScreen from './src/screens/LecturerPhucKhaoScreen';
+  import LecturerGradeSubmissionScreen from './src/screens/LecturerGradeSubmissionScreen';
   import NewsScreen from './src/screens/NewsScreen';
   import ProfileScreen from './src/screens/ProfileScreen';
   import RecruitmentScreen from './src/screens/RecruitmentScreen';
@@ -43,20 +47,37 @@
   function Navigation() {
     const { isAuthenticated, isLoading, user } = useAuth();
 
-    // Preload dữ liệu khi user đã đăng nhập
+    const isLecturer = user?.userPortal === 'lecturer';
+
+    // Preload dữ liệu khi user đã đăng nhập (chỉ áp dụng cho cổng sinh viên)
     useEffect(() => {
-      if (isAuthenticated && user) {
+      if (isAuthenticated && user && !isLecturer) {
         // Preload schedule data ngầm để cải thiện performance
         scheduleService.preloadScheduleData().catch(console.warn);
         // Đăng ký nhận push notification (FCM) sau khi đã đăng nhập
         fcmService.init(user).catch(err => console.warn('[FCM] init failed:', err));
       }
-    }, [isAuthenticated, user]);
+    }, [isAuthenticated, user, isLecturer]);
 
     return (
       <NavigationContainer>
         <Stack.Navigator screenOptions={{ headerShown: false }}>
           {isAuthenticated ? (
+            isLecturer ? (
+              <>
+                <Stack.Screen
+                  name="LecturerHome"
+                  component={LecturerHomeScreen}
+                  options={{ animationTypeForReplace: 'pop' }}
+                />
+                <Stack.Screen name="News" component={NewsScreen} />
+                <Stack.Screen name="LecturerGradeEntry" component={LecturerGradeEntryScreen} />
+                <Stack.Screen name="LecturerGradeEntryByPhach" component={LecturerGradeEntryByPhachScreen} />
+                <Stack.Screen name="LecturerStudentInfo" component={LecturerStudentInfoScreen} />
+                <Stack.Screen name="LecturerPhucKhao" component={LecturerPhucKhaoScreen} />
+                <Stack.Screen name="LecturerGradeSubmission" component={LecturerGradeSubmissionScreen} />
+              </>
+            ) : (
             <>
               <Stack.Screen
                 name="Home"
@@ -89,8 +110,8 @@
               <Stack.Screen name="OneStopService" component={OneStopServiceScreen} />
               <Stack.Screen name="OnlinePayment" component={OnlinePaymentScreen} />
               <Stack.Screen name="Document" component={DocumentScreen} />
-              <Stack.Screen name="Settings" component={SettingsScreen} />
             </>
+            )
           ) : (
             <>
               <Stack.Screen

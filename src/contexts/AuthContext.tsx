@@ -2,12 +2,14 @@ import React, { createContext, useState, useContext, useEffect, ReactNode, useRe
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
 import { authService, User } from '../services/authService';
+import { lecturerService, LECTURER_ROLE_CODE } from '../services/lecturerService';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   error: string | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithSSO: (info: { email?: string; name?: string; provider: 'google' | 'microsoft'; portalUrl?: string; tokenJWT?: string }) => Promise<void>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
   updateUserLocal: (data: Partial<User>) => Promise<void>;
@@ -112,7 +114,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Lấy profile mới từ server (không dùng cache để tránh hiển thị thông tin cũ)
         try {
           const profile = await authService.getProfile();
-          setUser(profile);
+          const withPortal = await detectUserPortal(profile);
+          setUser(withPortal);
         } catch (profileError) {
           console.error('Error fetching profile:', profileError);
           // Nếu lỗi lấy profile, đăng xuất để tránh trạng thái không nhất quán
@@ -136,6 +139,53 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Sau khi có profile, gọi LayDSVaiTroNguoiDung để biết user là SV hay GV.
+  // Nếu là GV, gọi tiếp NS_HoSoV2/LayChiTiet để lấy tên thật + mã + email + ảnh.
+  // Mặc định = 'student' nếu không tìm thấy vai trò cán bộ hoặc API lỗi.
+  const detectUserPortal = async (profile: User): Promise<User> => {
+    try {
+      const roles = await lecturerService.getRoles();
+      const lecturerRole = roles.find(
+        (r) => (r.MAVAITRO || '').toLowerCase() === LECTURER_ROLE_CODE.toLowerCase()
+      );
+      if (lecturerRole) {
+        let lecturerProfile: Awaited<ReturnType<typeof lecturerService.getProfile>> = null;
+        try {
+          lecturerProfile = await lecturerService.getProfile();
+        } catch (err) {
+          console.warn('[AuthContext] ⚠️ Không lấy được hồ sơ cán bộ:', err);
+        }
+
+        const fullnameFromHoSo = lecturerProfile
+          ? `${(lecturerProfile.HODEM || '').trim()} ${(lecturerProfile.TEN || '').trim()}`.trim()
+          : '';
+
+        const merged: User = {
+          ...profile,
+          userPortal: 'lecturer',
+          activeRoleId: lecturerRole.ID,
+          activeRoleName: lecturerRole.TENVAITRO,
+          fullname: fullnameFromHoSo || profile.fullname,
+          username: lecturerProfile?.MASO || profile.username,
+          email: lecturerProfile?.EMAIL || profile.email,
+          avatar: lecturerProfile?.ANH || profile.avatar,
+          user_tile:
+            lecturerProfile?.MASO ||
+            lecturerProfile?.LOAIGIANGVIEN_TEN ||
+            lecturerRole.TENVAITRO ||
+            profile.user_tile,
+        };
+        await AsyncStorage.setItem('userData', JSON.stringify(merged));
+        return merged;
+      }
+    } catch (err) {
+      console.warn('[AuthContext] ⚠️ detectUserPortal lỗi, mặc định student:', err);
+    }
+    const merged: User = { ...profile, userPortal: 'student' };
+    await AsyncStorage.setItem('userData', JSON.stringify(merged));
+    return merged;
   };
 
   // Cập nhật cục bộ user (avatar, coverImage, fullname, ...), đồng bộ AsyncStorage
@@ -192,8 +242,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // console.log('[AuthContext] 📝 Gọi authService.getProfile...');
       const profile = await authService.getProfile();
       // console.log('[AuthContext] ✅ GetProfile hoàn thành - User:', profile.fullname);
-      
-      setUser(profile);
+
+      const profileWithPortal = await detectUserPortal(profile);
+      setUser(profileWithPortal);
       // console.log('[AuthContext] 🎉 Login flow hoàn thành! User đã được set.');
 
       // Thiết lập timers cho phiên làm việc mới
@@ -216,6 +267,154 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.log('[AuthContext] 🏁 Login flow kết thúc');
     }
   };
+
+  const loginWithSSO: AuthContextType['loginWithSSO'] = async (info) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      setUser(null);
+      clearSessionTimers();
+
+      // Clear cache module-level của các service (giống login() thường) — nếu
+      // bỏ qua, logout rồi login SSO lại sẽ dính dữ liệu cũ trong memory →
+      // server qldt nhận request lẫn lộn state, sinh ORA-24338/ORA-12899.
+      try {
+        const { scheduleService } = await import('../services/scheduleService');
+        await scheduleService.clearCache();
+      } catch (err) {
+        console.warn('[AuthContext/SSO] ⚠️ Không thể xóa schedule cache:', err);
+      }
+      try {
+        const { financeService } = await import('../services/financeService');
+        financeService.clearCache();
+      } catch (err) {
+        console.warn('[AuthContext/SSO] ⚠️ Không thể xóa finance cache:', err);
+      }
+      try {
+        const { examService } = await import('../services/examService');
+        examService.clearCache();
+      } catch (err) {
+        console.warn('[AuthContext/SSO] ⚠️ Không thể xóa exam cache:', err);
+      }
+      try {
+        const { newsService } = await import('../services/newsService');
+        await newsService.clearCache();
+      } catch (err) {
+        console.warn('[AuthContext/SSO] ⚠️ Không thể xóa news cache:', err);
+      }
+
+      // Nếu vớt được tokenJWT thật từ portal qldt (do Config.js server-side
+      // render): dùng làm access_token thật, axios sẽ gắn Bearer tự động.
+      // Nếu không vớt được: lưu marker để app navigate được nhưng API sẽ 401.
+      const token = info.tokenJWT && info.tokenJWT.trim().length > 10
+        ? info.tokenJWT.trim()
+        : `sso_${info.provider}_${Date.now()}`;
+      const expiresAt = new Date(Date.now() + SESSION_DURATION_MS).toISOString();
+      await AsyncStorage.setItem('access_token', token);
+      await AsyncStorage.setItem(SESSION_EXPIRES_AT_KEY, expiresAt);
+      console.log(
+        '[AuthContext] 🎫 SSO token saved:',
+        token.startsWith('sso_') ? 'MARKER (API sẽ 401)' : `JWT [${token.substring(0, 16)}...]`,
+      );
+
+      // sub PHẢI là user ID nội bộ của qldt (claim 'sub'/'unique_name' trong JWT
+      // qldt cấp). menuService/profileService/scheduleService dùng userData.sub
+      // làm key query Oracle — nếu để email Google ở đây, API trả rỗng → menu
+      // trống. JWT decode lấy real ID. Email Google chỉ là fallback cuối nếu
+      // JWT không decode được.
+      let subId = '';
+      let jwtPayload: any = null;
+      if (info.tokenJWT && info.tokenJWT.includes('.')) {
+        try {
+          const payloadB64 = info.tokenJWT.split('.')[1] || '';
+          const padded = payloadB64.replace(/-/g, '+').replace(/_/g, '/');
+          const pad = padded.length % 4;
+          const fixed = padded + (pad ? '='.repeat(4 - pad) : '');
+          jwtPayload = JSON.parse(
+            decodeURIComponent(
+              atob(fixed)
+                .split('')
+                .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+                .join(''),
+            ),
+          );
+          subId = String(
+            jwtPayload.sub ||
+              jwtPayload.unique_name ||
+              jwtPayload.userId ||
+              jwtPayload.id ||
+              jwtPayload.nameid ||
+              '',
+          );
+        } catch (e) {
+          console.warn('[AuthContext/SSO] ⚠️ Decode JWT thất bại:', e);
+        }
+      }
+      if (!subId) subId = info.email || '';
+      if (!subId) subId = `sso_${info.provider}_${Date.now()}`;
+      console.log('[AuthContext/SSO] 🆔 subId =', subId, 'jwt claims:', jwtPayload ? Object.keys(jwtPayload) : 'none');
+
+      // Mirror authService.getProfile() JWT mapping để menu/profile/schedule
+      // service nhìn thấy cấu trúc User giống hệt login bằng username/password.
+      const ssoUser: User = {
+        sub: subId,
+        email: String(
+          jwtPayload?.email ||
+            jwtPayload?.upn ||
+            jwtPayload?.preferred_username ||
+            jwtPayload?.unique_name ||
+            info.email ||
+            '',
+        ),
+        username: String(
+          jwtPayload?.username ||
+            jwtPayload?.name ||
+            jwtPayload?.unique_name ||
+            jwtPayload?.email ||
+            info.email?.split('@')[0] ||
+            subId,
+        ),
+        fullname: String(
+          jwtPayload?.fullname ||
+            jwtPayload?.name ||
+            jwtPayload?.displayName ||
+            jwtPayload?.given_name ||
+            jwtPayload?.family_name ||
+            jwtPayload?.unique_name ||
+            info.name ||
+            info.email ||
+            'Sinh viên',
+        ),
+        user_tile: String(
+          jwtPayload?.user_tile ||
+            jwtPayload?.role ||
+            jwtPayload?.roles?.[0] ||
+            jwtPayload?.title ||
+            (info.provider === 'google' ? 'Google SSO' : 'Microsoft SSO'),
+        ),
+        roles: Array.isArray(jwtPayload?.roles)
+          ? jwtPayload.roles
+          : jwtPayload?.role
+          ? [jwtPayload.role]
+          : ['student'],
+      };
+      await AsyncStorage.setItem('userData', JSON.stringify(ssoUser));
+      const ssoUserWithPortal = await detectUserPortal(ssoUser);
+      setUser(ssoUserWithPortal);
+
+      const expires = new Date(expiresAt);
+      if (!isNaN(expires.getTime())) scheduleSessionTimers(expires);
+    } catch (err: any) {
+      console.error('[AuthContext] ❌ SSO login thất bại:', err.message);
+      setError(err.message || 'SSO login thất bại');
+      throw err;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Hằng số dùng trong loginWithSSO
+  const SESSION_DURATION_MS = 24 * 60 * 60 * 1000;
 
   const logout = async () => {
     try {
@@ -295,6 +494,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         isLoading,
         error,
         login,
+        loginWithSSO,
         logout,
         isAuthenticated: !!user,
         updateUserLocal,

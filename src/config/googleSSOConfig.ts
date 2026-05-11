@@ -16,19 +16,15 @@ export const GOOGLE_SSO_CONFIG = {
   authorizationEndpoint: 'https://accounts.google.com/o/oauth2/v2/auth',
   tokenEndpoint: 'https://oauth2.googleapis.com/token',
   
-  // Scopes
-  scopes: [
-    'openid',
-    'profile',
-    'email',
-  ],
-  
+  // Scopes - khớp web (chỉ email)
+  scopes: ['email'],
+
   // Response type
   responseType: 'code', // Authorization code flow
 };
 
 /**
- * Build Google authorization URL
+ * Build Google authorization URL - khớp 100% với web qldt.eaut.edu.vn/congthongtin/login.aspx
  */
 export function buildGoogleAuthUrl(state: string): string {
   const params = new URLSearchParams({
@@ -37,8 +33,10 @@ export function buildGoogleAuthUrl(state: string): string {
     response_type: GOOGLE_SSO_CONFIG.responseType,
     scope: GOOGLE_SSO_CONFIG.scopes.join(' '),
     state: state,
-    access_type: 'offline', // Get refresh token
-    prompt: 'consent', // Force consent screen để lấy refresh token
+    include_granted_scopes: 'true',
+    // Luôn hiện màn chọn tài khoản, không auto-login tài khoản cũ — giống
+    // Microsoft SSO (xem microsoftSSOConfig.ts dòng 122)
+    prompt: 'select_account',
   });
 
   return `${GOOGLE_SSO_CONFIG.authorizationEndpoint}?${params.toString()}`;

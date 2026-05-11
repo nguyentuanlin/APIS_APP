@@ -22,6 +22,13 @@ interface GoogleUserInfo {
   picture?: string;
   sub?: string; // Google user ID
   email_verified?: boolean;
+  // Khi đăng nhập qua web portal qldt (code flow → ASP.NET session), name có thể
+  // được trích từ DOM. Cookies do WebView giữ — không nằm trong object này.
+  portalUrl?: string;
+  source?: 'google_token' | 'qldt_portal';
+  // Token thực vớt được từ portal (edu.system.tokenJWT / AXYZCLRVN), dùng làm
+  // access_token cho axios. Web set Authorization: "Bearer " + tokenJWT.
+  tokenJWT?: string;
 }
 
 class GoogleSSOService {
@@ -136,6 +143,51 @@ class GoogleSSOService {
       console.error('❌ Google SSO callback error:', error.message);
       throw error;
     }
+  }
+
+  /**
+   * Xử lý khi WebView landing ở portal qldt (sau khi login.aspx server-side
+   * đã exchange code → token → set ASP.NET session cookie).
+   * App KHÔNG có access_token Google; toàn bộ session do cookie WebView giữ.
+   */
+  async handlePortalLogin(args: {
+    portalUrl: string;
+    name?: string;
+    email?: string;
+    tokenJWT?: string;
+  }): Promise<GoogleUserInfo> {
+    const info: GoogleUserInfo = {
+      email: args.email || '',
+      name: args.name || 'Sinh viên',
+      portalUrl: args.portalUrl,
+      source: 'qldt_portal',
+    };
+    // Lưu user info
+    await AsyncStorage.setItem(
+      GoogleSSOService.STORAGE_KEYS.USER_INFO,
+      JSON.stringify(info),
+    );
+    // Token: nếu vớt được từ DOM portal thì dùng làm access_token thật, không thì
+    // dùng marker để app vẫn navigate được (API sẽ 401)
+    const token = args.tokenJWT && args.tokenJWT.trim().length > 0
+      ? args.tokenJWT.trim()
+      : 'qldt_portal_session';
+    await AsyncStorage.setItem(GoogleSSOService.STORAGE_KEYS.ACCESS_TOKEN, token);
+    await AsyncStorage.setItem(
+      GoogleSSOService.STORAGE_KEYS.EXPIRES_AT,
+      (Date.now() + 30 * 60 * 1000).toString(),
+    );
+    console.log(
+      '✅ qldt portal login captured:',
+      args.portalUrl,
+      'token:',
+      token === 'qldt_portal_session' ? 'MARKER (chưa vớt được)' : `[${token.substring(0, 12)}...]`,
+    );
+    // Đồng bộ luôn sang key access_token chung để axios interceptor dùng được
+    if (token !== 'qldt_portal_session') {
+      await AsyncStorage.setItem('access_token', token);
+    }
+    return { ...info, tokenJWT: token !== 'qldt_portal_session' ? token : undefined };
   }
 
   /**
