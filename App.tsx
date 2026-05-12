@@ -15,6 +15,22 @@
   import LecturerStudentInfoScreen from './src/screens/LecturerStudentInfoScreen';
   import LecturerPhucKhaoScreen from './src/screens/LecturerPhucKhaoScreen';
   import LecturerGradeSubmissionScreen from './src/screens/LecturerGradeSubmissionScreen';
+  import LecturerScheduleScreen from './src/screens/LecturerScheduleScreen';
+  import LecturerScheduleAdminScreen from './src/screens/LecturerScheduleAdminScreen';
+  import LecturerStudentScheduleScreen from './src/screens/LecturerStudentScheduleScreen';
+  import LecturerRoomScheduleScreen from './src/screens/LecturerRoomScheduleScreen';
+  import LecturerMultiRoomScheduleScreen from './src/screens/LecturerMultiRoomScheduleScreen';
+  import LecturerBusyTrackingScreen from './src/screens/LecturerBusyTrackingScreen';
+  import LecturerScheduleApprovalScreen from './src/screens/LecturerScheduleApprovalScreen';
+  import LecturerScheduleProcessingScreen from './src/screens/LecturerScheduleProcessingScreen';
+  import LecturerWorkloadScreen from './src/screens/LecturerWorkloadScreen';
+  import LecturerExamGradingScreen from './src/screens/LecturerExamGradingScreen';
+  import LecturerGradingProgressScreen from './src/screens/LecturerGradingProgressScreen';
+  import LecturerGradingProgressByClassScreen from './src/screens/LecturerGradingProgressByClassScreen';
+  import LecturerGradingProgressBySubjectScreen from './src/screens/LecturerGradingProgressBySubjectScreen';
+  import LecturerSurveyResultScreen from './src/screens/LecturerSurveyResultScreen';
+  import LecturerScoreDistributionScreen from './src/screens/LecturerScoreDistributionScreen';
+  import LecturerClassListScreen from './src/screens/LecturerClassListScreen';
   import NewsScreen from './src/screens/NewsScreen';
   import ProfileScreen from './src/screens/ProfileScreen';
   import RecruitmentScreen from './src/screens/RecruitmentScreen';
@@ -76,6 +92,23 @@
                 <Stack.Screen name="LecturerStudentInfo" component={LecturerStudentInfoScreen} />
                 <Stack.Screen name="LecturerPhucKhao" component={LecturerPhucKhaoScreen} />
                 <Stack.Screen name="LecturerGradeSubmission" component={LecturerGradeSubmissionScreen} />
+                <Stack.Screen name="LecturerSchedule" component={LecturerScheduleScreen} />
+                <Stack.Screen name="LecturerScheduleAdmin" component={LecturerScheduleAdminScreen} />
+                <Stack.Screen name="LecturerStudentSchedule" component={LecturerStudentScheduleScreen} />
+                <Stack.Screen name="LecturerRoomSchedule" component={LecturerRoomScheduleScreen} />
+                <Stack.Screen name="LecturerMultiRoomSchedule" component={LecturerMultiRoomScheduleScreen} />
+                <Stack.Screen name="LecturerBusyTracking" component={LecturerBusyTrackingScreen} />
+                <Stack.Screen name="LecturerScheduleApproval" component={LecturerScheduleApprovalScreen} />
+                <Stack.Screen name="LecturerScheduleProcessing" component={LecturerScheduleProcessingScreen} />
+                <Stack.Screen name="LecturerWorkload" component={LecturerWorkloadScreen} />
+                <Stack.Screen name="LecturerExamGrading" component={LecturerExamGradingScreen} />
+                <Stack.Screen name="LecturerGradingProgress" component={LecturerGradingProgressScreen} />
+                <Stack.Screen name="LecturerGradingProgressByClass" component={LecturerGradingProgressByClassScreen} />
+                <Stack.Screen name="LecturerGradingProgressBySubject" component={LecturerGradingProgressBySubjectScreen} />
+                <Stack.Screen name="LecturerSurveyResult" component={LecturerSurveyResultScreen} />
+                <Stack.Screen name="LecturerScoreDistribution" component={LecturerScoreDistributionScreen} />
+                <Stack.Screen name="LecturerClassList" component={LecturerClassListScreen} />
+                <Stack.Screen name="Document" component={DocumentScreen} />
               </>
             ) : (
             <>

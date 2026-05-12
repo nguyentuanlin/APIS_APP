@@ -111,6 +111,8 @@ const LecturerHomeScreen = () => {
     // Card cha "Quản lý điểm" → shortcut sang "Nhập điểm theo DS thi" (item con phổ biến nhất).
     // Khi có thêm screen QLD khác, đổi thành màn list submenu.
     'CCB.QLD': 'LecturerGradeEntry',
+    // Card cha "Lịch giảng" → màn Thời khóa biểu cá nhân
+    'CCB.LICHGIANG': 'LecturerSchedule',
   };
 
   const handleItemPress = (item: LecturerMenuItem) => {

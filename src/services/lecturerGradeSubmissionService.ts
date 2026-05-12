@@ -6,6 +6,16 @@ import { API_HOSTS } from '../config/apiHosts';
 export const CHUCNANG_ID_NHAPDIEM = '0EFA595D5E7B41A28D8884FA80F992EC';
 export const APP_ID_CONG_CAN_BO = 'B0B172E252D24251A5E650D38AC901A2';
 
+// Loại xác nhận khi gọi D_XacNhan/Them_Diem_XacNhan
+export const LOAI_XN_HOAN_THANH = 'XACNHAN_HOANTHANH_NHAP';
+export const LOAI_XN_CONG_BO = 'XACNHAN_CONGBODIEM';
+
+export interface HanhDongXacNhanItem {
+  ID: string;
+  TEN: string;
+  [k: string]: any;
+}
+
 export interface ComboItem {
   ID: string;
   TEN: string;
@@ -260,6 +270,77 @@ export const lecturerGradeSubmissionService = {
       strLanThi: String(nguoiHocItem.LANTHI || ''),
       strDiem: diem,
       strGhiChu: '',
+      strNguoiThucHien_Id: userId,
+    });
+  },
+
+  // ===== Action buttons =====
+
+  // List trạng thái xác nhận cho "Công bố" hoặc "Xác nhận hoàn thành nhập"
+  async getHanhDongXacNhan(
+    danhSachHocId: string,
+    loaiXacNhan: string
+  ): Promise<HanhDongXacNhanItem[]> {
+    const userId = await getUserId();
+    return await callGet<HanhDongXacNhanItem[]>(
+      API_HOSTS.quanLyDiem,
+      'D_HanhDongXacNhan/LayDanhSach',
+      {
+        strChucNang_Id: CHUCNANG_ID_NHAPDIEM,
+        strLoaiXacNhan_Id: loaiXacNhan,
+        strNguoiThucHien_Id: userId,
+        strDiem_DanhSachHoc_Id: danhSachHocId,
+      }
+    );
+  },
+
+  // Thêm xác nhận (Công bố / Xác nhận hoàn thành)
+  async confirmXacNhan(
+    danhSachHocId: string,
+    hanhDongId: string,
+    loaiXacNhan: string,
+    note: string = ''
+  ): Promise<void> {
+    const userId = await getUserId();
+    await callPost(API_HOSTS.quanLyDiem, 'D_XacNhan/Them_Diem_XacNhan', {
+      strChucNang_Id: CHUCNANG_ID_NHAPDIEM,
+      strNguoiThucHien_Id: userId,
+      strDiem_DanhSachHoc_Id: danhSachHocId,
+      strHanhDong_Id: hanhDongId,
+      strLoaiXacNhan_Id: loaiXacNhan,
+      strThongTinXacNhan: note,
+      strNguoiXacNhan_Id: userId,
+      strDuLieuXacNhan: danhSachHocId,
+    });
+  },
+
+  // Tính lại điểm cho 1 sinh viên
+  async tinhLaiDiem(nguoiHocItem: NguoiHocItem): Promise<void> {
+    const userId = await getUserId();
+    await callPost(API_HOSTS.quanLyDiem, 'D_Hoc_NguoiHoc_Diem/Tinh_Diem_NguoiHoc_ThanhPhan', {
+      strChucNang_Id: CHUCNANG_ID_NHAPDIEM,
+      strUngDung_Id: APP_ID_CONG_CAN_BO,
+      strDaoTao_ThoiGianDaoTao_Id: nguoiHocItem.DAOTAO_THOIGIANDAOTAO_ID || '',
+      strDiem_DanhSach_NguoiHoc_Id: nguoiHocItem.ID,
+      strDiem_DanhSachHoc_Id: nguoiHocItem.DIEM_DANHSACHHOC_ID,
+      strQLSV_NguoiHoc_Id: nguoiHocItem.QLSV_NGUOIHOC_ID,
+      strDaoTao_ChuongTrinh_Id: nguoiHocItem.CHUONGTRINH_ID || '',
+      strDaoTao_HocPhan_Id: nguoiHocItem.DAOTAO_HOCPHAN_ID,
+      strDiem_ThanhPhanDiem_Id: '',
+      strLanHoc: String(nguoiHocItem.LANHOC || ''),
+      strLanThi: String(nguoiHocItem.LANTHI || ''),
+      strGhiChu: '',
+      strNguoiThucHien_Id: userId,
+    });
+  },
+
+  // Lấy lại điểm theo Rubric cho cả bảng (1 lần)
+  async layLaiRubric(danhSachHocId: string): Promise<void> {
+    const userId = await getUserId();
+    await callPost(API_HOSTS.thiPhach, 'TP_XuLyTuKhoa/QuyDoiRubricTheoLopHocPhan', {
+      dCapNhatLaiDuLieu: -1,
+      strQLSV_NguoiHoc_Id: '',
+      strDiem_DanhSachHoc_Id: danhSachHocId,
       strNguoiThucHien_Id: userId,
     });
   },

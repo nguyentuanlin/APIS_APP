@@ -26,6 +26,9 @@ import {
   BangDiemItem,
   CongThucCotItem,
   NguoiHocItem,
+  HanhDongXacNhanItem,
+  LOAI_XN_HOAN_THANH,
+  LOAI_XN_CONG_BO,
 } from '../services/lecturerGradeSubmissionService';
 
 // -------- Picker --------
@@ -134,6 +137,17 @@ const LecturerGradeSubmissionScreen = () => {
   const [chiXemMap, setChiXemMap] = useState<Record<string, number>>({});
   const [sortType, setSortType] = useState('ABC');
   const [saving, setSaving] = useState(false);
+
+  // Modal xác nhận (Công bố / Xác nhận hoàn thành)
+  const [confirmModal, setConfirmModal] = useState<{
+    visible: boolean;
+    loaiXacNhan: string;
+    title: string;
+  }>({ visible: false, loaiXacNhan: '', title: '' });
+  const [hanhDongList, setHanhDongList] = useState<HanhDongXacNhanItem[]>([]);
+  const [hanhDongId, setHanhDongId] = useState('');
+  const [submittingConfirm, setSubmittingConfirm] = useState(false);
+  const [runningAction, setRunningAction] = useState(false);
 
   // ----- Init: Loại DS -----
   useEffect(() => {
@@ -340,6 +354,95 @@ const LecturerGradeSubmissionScreen = () => {
     ]);
   };
 
+  // ----- Action buttons -----
+  const openConfirmModal = async (loaiXacNhan: string, title: string) => {
+    if (!activeBang) return;
+    setConfirmModal({ visible: true, loaiXacNhan, title });
+    setHanhDongList([]);
+    setHanhDongId('');
+    try {
+      const list = await svc.getHanhDongXacNhan(activeBang.ID, loaiXacNhan);
+      setHanhDongList(list);
+      if (list.length > 0) setHanhDongId(list[0].ID);
+    } catch (e: any) {
+      Alert.alert('Lỗi', e?.message || 'Không tải được trạng thái');
+    }
+  };
+
+  const submitConfirm = async () => {
+    if (!activeBang || !hanhDongId) return;
+    setSubmittingConfirm(true);
+    try {
+      await svc.confirmXacNhan(activeBang.ID, hanhDongId, confirmModal.loaiXacNhan);
+      setConfirmModal({ visible: false, loaiXacNhan: '', title: '' });
+      Alert.alert('Thành công', `${confirmModal.title} thành công.`);
+    } catch (e: any) {
+      Alert.alert('Lỗi', e?.message || 'Thực hiện thất bại');
+    } finally {
+      setSubmittingConfirm(false);
+    }
+  };
+
+  const handleTinhLai = () => {
+    if (!activeBang || nguoiHocList.length === 0) return;
+    Alert.alert(
+      'Tính lại điểm',
+      `Tính lại điểm tổng cho ${nguoiHocList.length} sinh viên?`,
+      [
+        { text: 'Huỷ', style: 'cancel' },
+        {
+          text: 'Đồng ý',
+          onPress: async () => {
+            setRunningAction(true);
+            let ok = 0;
+            let fail = 0;
+            for (const nh of nguoiHocList) {
+              try {
+                await svc.tinhLaiDiem(nh);
+                ok++;
+              } catch {
+                fail++;
+              }
+            }
+            setRunningAction(false);
+            Alert.alert(
+              'Kết quả',
+              `Tính lại thành công: ${ok}/${nguoiHocList.length}${fail > 0 ? `\nThất bại: ${fail}` : ''}`,
+              [{ text: 'OK', onPress: () => activeBang && openBangDiem(activeBang) }]
+            );
+          },
+        },
+      ]
+    );
+  };
+
+  const handleLayLaiRubric = () => {
+    if (!activeBang) return;
+    Alert.alert('Lấy lại điểm theo Rubric', 'Hệ thống sẽ quy đổi lại điểm từ Rubric. Tiếp tục?', [
+      { text: 'Huỷ', style: 'cancel' },
+      {
+        text: 'Đồng ý',
+        onPress: async () => {
+          setRunningAction(true);
+          try {
+            await svc.layLaiRubric(activeBang.ID);
+            Alert.alert('Thành công', 'Đã lấy lại điểm theo Rubric.', [
+              { text: 'OK', onPress: () => activeBang && openBangDiem(activeBang) },
+            ]);
+          } catch (e: any) {
+            Alert.alert('Lỗi', e?.message || 'Thực hiện thất bại');
+          } finally {
+            setRunningAction(false);
+          }
+        },
+      },
+    ]);
+  };
+
+  const handlePlaceholder = (label: string) => {
+    Alert.alert(label, 'Tính năng sẽ được phát triển sau.');
+  };
+
   // ----- Render card bảng điểm -----
   const renderBangDiem = ({ item, index }: { item: BangDiemItem; index: number }) => (
     <TouchableOpacity style={styles.bdCard} onPress={() => openBangDiem(item)} activeOpacity={0.85}>
@@ -543,6 +646,64 @@ const LecturerGradeSubmissionScreen = () => {
             </View>
           </View>
 
+          {/* Action button bar */}
+          <View style={styles.actionBar}>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.actionRow}>
+              <ActionButton
+                icon="bar-chart"
+                label="Báo cáo"
+                color="#10b981"
+                onPress={() => handlePlaceholder('Báo cáo')}
+              />
+              <ActionButton
+                icon="block"
+                label="Vi phạm thi"
+                color="#10b981"
+                onPress={() => handlePlaceholder('Vi phạm điều kiện thi')}
+              />
+              <ActionButton
+                icon="file-download"
+                label="Tải bảng điểm"
+                color="#64748B"
+                onPress={() => handlePlaceholder('Tải bảng điểm')}
+              />
+              <ActionButton
+                icon="cloud-upload"
+                label="Nhập file"
+                color="#3B82F6"
+                onPress={() => handlePlaceholder('Nhập điểm qua file')}
+              />
+              <ActionButton
+                icon="campaign"
+                label="Công bố"
+                color="#DC2626"
+                disabled={runningAction}
+                onPress={() => openConfirmModal(LOAI_XN_CONG_BO, 'Công bố')}
+              />
+              <ActionButton
+                icon="verified"
+                label="Xác nhận"
+                color="#10b981"
+                disabled={runningAction}
+                onPress={() => openConfirmModal(LOAI_XN_HOAN_THANH, 'Xác nhận hoàn thành')}
+              />
+              <ActionButton
+                icon="auto-awesome"
+                label="Lấy Rubric"
+                color="#0ea5e9"
+                disabled={runningAction}
+                onPress={handleLayLaiRubric}
+              />
+              <ActionButton
+                icon="calculate"
+                label="Tính lại"
+                color="#0ea5e9"
+                disabled={runningAction}
+                onPress={handleTinhLai}
+              />
+            </ScrollView>
+          </View>
+
           {/* Sort picker */}
           <View style={styles.sortBar}>
             <Text style={styles.sortLabel}>Sắp xếp:</Text>
@@ -604,11 +765,121 @@ const LecturerGradeSubmissionScreen = () => {
               </TouchableOpacity>
             </View>
           )}
+
+          {/* Overlay khi đang chạy action (tính lại / lấy rubric) */}
+          {runningAction && (
+            <View style={styles.runningOverlay}>
+              <ActivityIndicator size="large" color="#FFFFFF" />
+              <Text style={styles.runningText}>Đang xử lý...</Text>
+            </View>
+          )}
+
+          {/* Modal Xác nhận / Công bố */}
+          <Modal
+            visible={confirmModal.visible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setConfirmModal({ visible: false, loaiXacNhan: '', title: '' })}
+          >
+            <View style={styles.modalBackdrop}>
+              <View style={styles.confirmSheet}>
+                <View style={styles.confirmHeader}>
+                  <MaterialIcons name="verified" size={18} color="#1E3A8A" />
+                  <Text style={styles.confirmTitle}>{confirmModal.title}</Text>
+                  <TouchableOpacity
+                    onPress={() => setConfirmModal({ visible: false, loaiXacNhan: '', title: '' })}
+                    style={{ marginLeft: 'auto' }}
+                  >
+                    <MaterialIcons name="close" size={22} color="#64748B" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={styles.pickerLabel}>Trạng thái</Text>
+                {hanhDongList.length === 0 ? (
+                  <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                    <ActivityIndicator color="#1E3A8A" />
+                  </View>
+                ) : (
+                  <ScrollView style={{ maxHeight: 240 }}>
+                    {hanhDongList.map((hd) => (
+                      <TouchableOpacity
+                        key={hd.ID}
+                        style={[styles.hdItem, hanhDongId === hd.ID && styles.hdItemActive]}
+                        onPress={() => setHanhDongId(hd.ID)}
+                      >
+                        <MaterialIcons
+                          name={hanhDongId === hd.ID ? 'radio-button-checked' : 'radio-button-unchecked'}
+                          size={20}
+                          color={hanhDongId === hd.ID ? '#1E3A8A' : '#94A3B8'}
+                        />
+                        <Text style={[styles.hdItemText, hanhDongId === hd.ID && styles.hdItemTextActive]}>
+                          {hd.TEN}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
+
+                <View style={styles.confirmActions}>
+                  <TouchableOpacity
+                    style={styles.confirmCancelBtn}
+                    onPress={() => setConfirmModal({ visible: false, loaiXacNhan: '', title: '' })}
+                    disabled={submittingConfirm}
+                  >
+                    <Text style={styles.confirmCancelText}>Huỷ</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.confirmOkBtn,
+                      (submittingConfirm || !hanhDongId) && { opacity: 0.5 },
+                    ]}
+                    onPress={submitConfirm}
+                    disabled={submittingConfirm || !hanhDongId}
+                  >
+                    {submittingConfirm ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <>
+                        <MaterialIcons name="check" size={18} color="#FFFFFF" />
+                        <Text style={styles.confirmOkText}>Đồng ý</Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
         </KeyboardAvoidingView>
       </Modal>
     </SafeAreaView>
   );
 };
+
+const ActionButton = ({
+  icon,
+  label,
+  color,
+  onPress,
+  disabled,
+}: {
+  icon: string;
+  label: string;
+  color: string;
+  onPress: () => void;
+  disabled?: boolean;
+}) => (
+  <TouchableOpacity
+    style={[styles.actionBtn, { borderColor: color }, disabled && { opacity: 0.5 }]}
+    onPress={onPress}
+    disabled={disabled}
+    activeOpacity={0.8}
+  >
+    <MaterialIcons name={icon as any} size={16} color={color} />
+    <Text style={[styles.actionBtnText, { color }]} numberOfLines={1}>
+      {label}
+    </Text>
+  </TouchableOpacity>
+);
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F3F4F6' },
@@ -858,6 +1129,94 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   saveBtnText: { color: '#FFFFFF', fontWeight: '700', fontSize: 15 },
+
+  // Action button bar (Công bố / Xác nhận / Tính lại / ...)
+  actionBar: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  actionRow: {
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    gap: 8,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    marginRight: 8,
+    backgroundColor: '#FFFFFF',
+  },
+  actionBtnText: { fontSize: 12, fontWeight: '700' },
+
+  // Overlay khi đang chạy action
+  runningOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  runningText: { color: '#FFFFFF', marginTop: 10, fontWeight: '600' },
+
+  // Modal xác nhận
+  confirmSheet: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
+    marginHorizontal: 16,
+  },
+  confirmHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    marginBottom: 12,
+  },
+  confirmTitle: { fontSize: 16, fontWeight: '700', color: '#0F172A' },
+  hdItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#F8FAFC',
+    marginBottom: 6,
+  },
+  hdItemActive: { backgroundColor: '#EFF6FF', borderWidth: 1, borderColor: '#1E3A8A' },
+  hdItemText: { fontSize: 14, color: '#475569', flex: 1 },
+  hdItemTextActive: { color: '#1E3A8A', fontWeight: '700' },
+  confirmActions: { flexDirection: 'row', gap: 10, marginTop: 16 },
+  confirmCancelBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    backgroundColor: '#F1F5F9',
+  },
+  confirmCancelText: { color: '#475569', fontWeight: '700' },
+  confirmOkBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#10b981',
+  },
+  confirmOkText: { color: '#FFFFFF', fontWeight: '700' },
 });
 
 export default LecturerGradeSubmissionScreen;

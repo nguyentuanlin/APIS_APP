@@ -298,6 +298,7 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
       'CCB.NHTL': 'people',
       'CCB.KXN': 'fact-check',
       'CCB.DTDL': 'swap-horiz',
+      'CCB.KLCN': 'work',
       'CBB.KLCB': 'work',
       'CCB.QLD': 'grade',
       'CCB.NhapDiem': 'edit-note',
@@ -359,6 +360,27 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
       'CCB.IBD': 'LecturerStudentInfo', // Xem thông tin học tập, chương trình học sinh viên
       'CCB.KXPK': 'LecturerPhucKhao', // Khoa xem Phúc Khảo
       'CCB.NhapDiem': 'LecturerGradeSubmission', // Nhập điểm giảng viên
+      'CCB.TKH': 'LecturerSchedule', // Thời khóa biểu / Lịch giảng cá nhân
+      'CCB.TKHDM': 'LecturerScheduleAdmin', // Thời khóa biểu - Quản lý (admin)
+      'CCB.TKHDMSV': 'LecturerStudentSchedule', // Thời khóa biểu - Sinh viên
+      'CCB.TKHDMPH': 'LecturerRoomSchedule', // Thời khóa biểu - Phòng học - Đăng ký mượn phòng
+      'CCB.TKHNPH': 'LecturerMultiRoomSchedule', // Lịch giảng đường - theo dõi bận rỗi phòng học
+      'CCB.TKHNPHGV': 'LecturerBusyTracking', // Lịch giảng đường - theo dõi bận rỗi giảng viên
+      'CCB.KXN': 'LecturerScheduleApproval', // Khoa xác nhận đổi lịch
+      'CCB.DTDL': 'LecturerScheduleProcessing', // Đào tạo xử lý đổi lịch
+      'CCB.KLCN': 'LecturerWorkload', // Khối lượng cá nhân (mã chuẩn)
+      'CBB.KLCB': 'LecturerWorkload', // Khối lượng cá nhân (mã backend đang trả — typo prefix CBB)
+      'CCB.LCT': 'LecturerExamGrading', // Xem lịch chấm thi
+      'CCB.ND.KHT': 'LecturerGradingProgress', // Thống kê tiến độ nhập điểm theo kế hoạch thi
+      'CCB.ND.LHP': 'LecturerGradingProgressByClass', // Thống kê tiến độ nhập điểm theo lớp học phần
+      'CCB.ND.HP': 'LecturerGradingProgressBySubject', // Thống kê tiến độ nhập điểm theo học phần
+      'CCB.KS': 'LecturerSurveyResult', // Kết quả khảo sát cá nhân
+      'CCB.PDN': 'LecturerScoreDistribution', // Thống kê theo phổ điểm - Ngành
+      'CCB.VB': 'Document', // Văn bản, quy định, biểu mẫu (parent menu)
+      'CCB.vbqd': 'Document', // Văn bản, quy định, biểu mẫu (submenu)
+      'CCB.VBQD': 'Document', // (fallback nếu backend trả uppercase)
+      'CCB.LICHGIANG': 'LecturerSchedule', // Card cha "Lịch giảng" trên home — shortcut sang TKB
+      'CCB.NHTL': 'LecturerClassList', // Danh sách người học theo lớp
     };
 
     return screenMap[machucnang] || null;
