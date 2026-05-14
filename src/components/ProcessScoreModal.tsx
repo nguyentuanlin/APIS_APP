@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Text } from 'react-native';
-import attendanceService, { ProcessScore } from '../services/attendanceService';
+import attendanceService, { ProcessScore } from '../services/sinhVien/attendanceService';
 
 interface ProcessScoreModalProps {
   visible: boolean;

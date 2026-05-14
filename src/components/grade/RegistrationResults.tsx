@@ -14,7 +14,7 @@ import registrationService, {
   RegistrationResponse,
   KetQuaDangKy,
   LichSuDangKy,
-} from '../../services/registrationService';
+} from '../../services/sinhVien/registrationService';
 
 const RegistrationResults = () => {
   const [loading, setLoading] = useState(true);

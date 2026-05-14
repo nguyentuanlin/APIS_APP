@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Text } from 'react-native';
-import { Instructor, StudyDay } from '../services/courseRegistrationService';
+import { Instructor, StudyDay } from '../services/sinhVien/courseRegistrationService';
 
 interface FilterOptions {
   studyDays: number[];

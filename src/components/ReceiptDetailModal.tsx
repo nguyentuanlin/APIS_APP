@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { ReceiptItem, financeService } from '../services/financeService';
+import { ReceiptItem, financeService } from '../services/sinhVien/financeService';
 
 interface ReceiptDetailModalProps {
   visible: boolean;

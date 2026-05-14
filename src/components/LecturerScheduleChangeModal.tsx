@@ -19,7 +19,7 @@ import {
   lecturerScheduleService as svc,
   LichGiangItem,
   PhongHocItem,
-} from '../services/lecturerScheduleService';
+} from '../services/giangVien/lecturerScheduleService';
 
 interface Props {
   visible: boolean;

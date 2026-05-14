@@ -9,7 +9,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Text } from 'react-native';
-import attendanceService, { WeeklySchedule } from '../services/attendanceService';
+import attendanceService, { WeeklySchedule } from '../services/sinhVien/attendanceService';
 
 interface CourseDetailModalProps {
   visible: boolean;

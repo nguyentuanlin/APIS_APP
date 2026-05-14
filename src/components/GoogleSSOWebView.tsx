@@ -24,7 +24,7 @@ import {
   Platform,
 } from 'react-native';
 import { WebView, WebViewNavigation } from 'react-native-webview';
-import { googleSSOService, GoogleUserInfo } from '../services/googleSSOService';
+import { googleSSOService, GoogleUserInfo } from '../services/chung/googleSSOService';
 import { GOOGLE_SSO_CONFIG, validateGoogleConfig } from '../config/googleSSOConfig';
 
 interface GoogleSSOWebViewProps {

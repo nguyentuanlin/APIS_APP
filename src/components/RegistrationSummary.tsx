@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Text } from 'react-native';
-import { Course } from '../services/courseRegistrationService';
+import { Course } from '../services/sinhVien/courseRegistrationService';
 
 interface RegistrationSummaryProps {
   courses: Course[];

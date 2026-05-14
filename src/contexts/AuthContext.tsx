@@ -1,8 +1,8 @@
 import React, { createContext, useState, useContext, useEffect, ReactNode, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Alert } from 'react-native';
-import { authService, User } from '../services/authService';
-import { lecturerService, LECTURER_ROLE_CODE } from '../services/lecturerService';
+import { authService, User } from '../services/chung/authService';
+import { lecturerService, LECTURER_ROLE_CODE } from '../services/giangVien/lecturerService';
 
 interface AuthContextType {
   user: User | null;
@@ -210,7 +210,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Xóa cache của các service
       try {
-        const { scheduleService } = await import('../services/scheduleService');
+        const { scheduleService } = await import('../services/sinhVien/scheduleService');
         await scheduleService.clearCache();
         // console.log('[AuthContext] ✅ Đã xóa cache của scheduleService trước khi login');
       } catch (err) {
@@ -218,7 +218,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       try {
-        const { financeService } = await import('../services/financeService');
+        const { financeService } = await import('../services/sinhVien/financeService');
         financeService.clearCache();
         // console.log('[AuthContext] ✅ Đã xóa cache của financeService trước khi login');
       } catch (err) {
@@ -226,7 +226,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       try {
-        const { examService } = await import('../services/examService');
+        const { examService } = await import('../services/sinhVien/examService');
         examService.clearCache();
         // console.log('[AuthContext] ✅ Đã xóa cache của examService trước khi login');
       } catch (err) {
@@ -279,25 +279,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // bỏ qua, logout rồi login SSO lại sẽ dính dữ liệu cũ trong memory →
       // server qldt nhận request lẫn lộn state, sinh ORA-24338/ORA-12899.
       try {
-        const { scheduleService } = await import('../services/scheduleService');
+        const { scheduleService } = await import('../services/sinhVien/scheduleService');
         await scheduleService.clearCache();
       } catch (err) {
         console.warn('[AuthContext/SSO] ⚠️ Không thể xóa schedule cache:', err);
       }
       try {
-        const { financeService } = await import('../services/financeService');
+        const { financeService } = await import('../services/sinhVien/financeService');
         financeService.clearCache();
       } catch (err) {
         console.warn('[AuthContext/SSO] ⚠️ Không thể xóa finance cache:', err);
       }
       try {
-        const { examService } = await import('../services/examService');
+        const { examService } = await import('../services/sinhVien/examService');
         examService.clearCache();
       } catch (err) {
         console.warn('[AuthContext/SSO] ⚠️ Không thể xóa exam cache:', err);
       }
       try {
-        const { newsService } = await import('../services/newsService');
+        const { newsService } = await import('../services/chung/newsService');
         await newsService.clearCache();
       } catch (err) {
         console.warn('[AuthContext/SSO] ⚠️ Không thể xóa news cache:', err);
@@ -424,7 +424,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Gỡ FCM token khỏi server trước khi clear user
       try {
-        const { fcmService } = await import('../services/fcmService');
+        const { fcmService } = await import('../services/chung/fcmService');
         await fcmService.cleanupOnLogout(user);
       } catch (err) {
         console.warn('[AuthContext] ⚠️ Không thể cleanup FCM:', err);
@@ -444,7 +444,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Import và clear cache của các service khác
       try {
-        const { scheduleService } = await import('../services/scheduleService');
+        const { scheduleService } = await import('../services/sinhVien/scheduleService');
         await scheduleService.clearCache();
         // console.log('[AuthContext] ✅ Đã xóa cache của scheduleService');
       } catch (err) {
@@ -452,7 +452,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       try {
-        const { financeService } = await import('../services/financeService');
+        const { financeService } = await import('../services/sinhVien/financeService');
         financeService.clearCache();
         // console.log('[AuthContext] ✅ Đã xóa cache của financeService');
       } catch (err) {
@@ -460,7 +460,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       try {
-        const { examService } = await import('../services/examService');
+        const { examService } = await import('../services/sinhVien/examService');
         examService.clearCache();
         // console.log('[AuthContext] ✅ Đã xóa cache của examService');
       } catch (err) {
@@ -468,7 +468,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }
       
       try {
-        const { newsService } = await import('../services/newsService');
+        const { newsService } = await import('../services/chung/newsService');
         await newsService.clearCache();
         // console.log('[AuthContext] ✅ Đã xóa cache của newsService');
       } catch (err) {

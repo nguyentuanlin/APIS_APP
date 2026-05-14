@@ -10,8 +10,8 @@ import {
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { Text } from 'react-native';
-import { CourseClass } from '../services/courseRegistrationService';
-import courseRegistrationService from '../services/courseRegistrationService';
+import { CourseClass } from '../services/sinhVien/courseRegistrationService';
+import courseRegistrationService from '../services/sinhVien/courseRegistrationService';
 
 // Interface cho lịch học
 interface ClassSchedule {

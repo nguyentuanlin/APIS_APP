@@ -1,0 +1,633 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { AE, AD } from '../../../crypto';
+import { API_HOSTS } from '../../config/apiHosts';
+const BASE_URL = `${API_HOSTS.sinhVien}/SV_Custom`;
+
+// Cache configuration
+const CACHE_DURATION = 5 * 60 * 1000; // 5 phút
+const CACHE_KEYS = {
+  SCHEDULE: 'cached_schedule_',
+  STUDENT_INFO: 'cached_student_info',
+};
+
+// Utility function để đợi token sẵn sàng
+const waitForToken = async (maxAttempts = 10, delay = 500): Promise<string> => {
+  for (let i = 0; i < maxAttempts; i++) {
+    const token = await AsyncStorage.getItem('access_token');
+    if (token) {
+      return token;
+    }
+    await new Promise(resolve => setTimeout(resolve, delay));
+  }
+  throw new Error('Token không sẵn sàng sau khi đợi');
+};
+
+// Types cho API responses
+export interface ScheduleItem {
+  ID: string;
+  IDLICHHOC: string;
+  IDSINHVIEN: string;
+  DANGKY_LOPHOCPHAN_ID: string;
+  TENHOCPHAN: string;
+  IDLOPHOCPHAN: string;
+  DANGKY_LOPHOCPHAN_TEN: string;
+  TENLOPHOCPHAN: string;
+  BAIHOC: string | null;
+  GIANGVIEN_ID: string;
+  NGAYBATDAU: string | null;
+  NGAYKETTHUC: string | null;
+  THU: string;
+  THUHOC: string;
+  SOTIET: number;
+  TIETBATDAU: number;
+  TIETKETTHUC: number;
+  IDPHONGHOC: string;
+  PHONGHOC_TEN: string;
+  TENPHONGHOC: string;
+  PHONGHOC_MA: string;
+  THUOCTINHLOP_ID: string;
+  THUOCTINH_TEN: string;
+  GIANGVIEN: string;
+  BUOIHOC: string;
+  NGAYHOC: string;
+  GIOBATDAU: number;
+  PHUTBATDAU: number;
+  GIOKETTHUC: number;
+  PHUTKETTHUC: number;
+  PHANLOAI: 'LICHHOC' | 'LICHTHI';
+  CATHI: string | null;
+  THONGTINCHUYENCAN: string | null;
+}
+
+export interface StudentInfo {
+  QLSV_TRANGTHAINGUOIHOC_ID: string;
+  QLSV_TRANGTHAINGUOIHOC_TEN: string;
+  QLSV_TRANGTHAINGUOIHOC_MA: string;
+  TTLL_KHICANBAOTINCHOAI_ODAU: string;
+  QLSV_NGUOIHOC_ID: string;
+  QLSV_NGUOIHOC_NGAYSINH: string;
+  QLSV_NGUOIHOC_MASO: string;
+  QLSV_NGUOIHOC_HODEM: string;
+  QLSV_NGUOIHOC_TEN: string;
+  QLSV_NGUOIHOC_GIOITINH: string;
+  DAOTAO_TOCHUCCHUONGTRINH_ID: string;
+  DAOTAO_CHUONGTRINH_TEN: string;
+  DAOTAO_CHUONGTRINH_MA: string;
+  DAOTAO_LOPQUANLY_ID: string;
+  DAOTAO_LOPQUANLY_TEN: string;
+  DAOTAO_LOPQUANLY_MA: string;
+  DAOTAO_KHOADAOTAO_ID: string;
+  DAOTAO_KHOADAOTAO_TEN: string;
+  DAOTAO_KHOADAOTAO_MA: string;
+  DAOTAO_KHOAQUANLY_ID: string;
+  DAOTAO_KHOAQUANLY_TEN: string;
+  DAOTAO_KHOAQUANLY_MA: string;
+  DAOTAO_HEDAOTAO_ID: string;
+  DAOTAO_HEDAOTAO_TEN: string;
+  DAOTAO_HEDAOTAO_MA: string;
+}
+
+interface ApiResponse<T> {
+  Data: T[];
+  Message: string;
+  Success: boolean;
+  Pager: any;
+  Id: any;
+}
+
+interface CachedData<T> {
+  data: T;
+  timestamp: number;
+}
+
+class ScheduleService {
+  private scheduleCache = new Map<string, CachedData<ScheduleItem[]>>();
+  private studentInfoCache: CachedData<StudentInfo> | null = null;
+  private async getAuthToken(): Promise<string> {
+    try {
+      let token = await AsyncStorage.getItem('access_token');
+      
+      if (!token) {
+        token = await waitForToken();
+      }
+      
+      return token;
+    } catch (error) {
+      console.error('[ScheduleService] ❌ Error getting token:', error);
+      throw new Error('Không tìm thấy token xác thực');
+    }
+  }
+
+  private async getUserId(): Promise<string> {
+    try {
+      // Lấy user ID từ userData trong AsyncStorage
+      const userDataStr = await AsyncStorage.getItem('userData');
+      if (userDataStr) {
+        const userData = JSON.parse(userDataStr);
+        if (userData.sub) {
+          // Token có format: "ID;hash;timestamp" hoặc chỉ là ID
+          const userId = userData.sub.split(';')[0];
+          // console.log('[ScheduleService] 📍 Using user ID from userData:', userId);
+          return userId;
+        }
+      }
+      
+      // Fallback: parse từ token
+      const token = await AsyncStorage.getItem('access_token');
+      if (token && token.includes('.')) {
+        // JWT token
+        const parts = token.split('.');
+        if (parts.length >= 2) {
+          const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+          const pad = base64.length % 4;
+          const padded = base64 + (pad ? '='.repeat(4 - pad) : '');
+          const payloadJson = decodeURIComponent(
+            atob(padded)
+              .split('')
+              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+          );
+          const payload = JSON.parse(payloadJson);
+          const uniqueName = payload.unique_name || payload.sub || payload.userId;
+          if (uniqueName) {
+            const userId = String(uniqueName).split(';')[0];
+            // console.log('[ScheduleService] 📍 Using user ID from token:', userId);
+            return userId;
+          }
+        }
+      }
+      
+      throw new Error('Không tìm thấy user ID');
+    } catch (error) {
+      console.error('[ScheduleService] ❌ Error getting user ID:', error);
+      throw new Error('Không tìm thấy user ID. Vui lòng đăng nhập lại.');
+    }
+  }
+
+  /**
+   * Kiểm tra cache có hợp lệ không
+   */
+  private isCacheValid<T>(cachedData: CachedData<T> | null): boolean {
+    if (!cachedData) return false;
+    return Date.now() - cachedData.timestamp < CACHE_DURATION;
+  }
+
+  /**
+   * Lưu cache vào AsyncStorage
+   */
+  private async saveCacheToStorage<T>(key: string, data: T): Promise<void> {
+    try {
+      const cachedData: CachedData<T> = {
+        data,
+        timestamp: Date.now(),
+      };
+      await AsyncStorage.setItem(key, JSON.stringify(cachedData));
+    } catch (error) {
+      console.warn('[ScheduleService] ⚠️ Failed to save cache:', error);
+    }
+  }
+
+  /**
+   * Lấy cache từ AsyncStorage
+   */
+  private async getCacheFromStorage<T>(key: string): Promise<CachedData<T> | null> {
+    try {
+      const cached = await AsyncStorage.getItem(key);
+      if (!cached) return null;
+      
+      const cachedData: CachedData<T> = JSON.parse(cached);
+      return this.isCacheValid(cachedData) ? cachedData : null;
+    } catch (error) {
+      console.warn('[ScheduleService] ⚠️ Failed to get cache:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Tạo cache key cho lịch học
+   */
+  private getScheduleCacheKey(startDate: string, endDate: string): string {
+    return `${CACHE_KEYS.SCHEDULE}${startDate}_${endDate}`;
+  }
+
+  async getPersonalSchedule(startDate: string, endDate: string): Promise<ScheduleItem[]> {
+    try {
+      const cacheKey = this.getScheduleCacheKey(startDate, endDate);
+      
+      // Kiểm tra memory cache trước
+      const memoryCache = this.scheduleCache.get(cacheKey);
+      if (memoryCache && this.isCacheValid(memoryCache)) {
+        // console.log('[ScheduleService] ✅ Using memory cache for schedule');
+        return memoryCache.data;
+      }
+
+      // Kiểm tra storage cache
+      const storageCache = await this.getCacheFromStorage<ScheduleItem[]>(cacheKey);
+      if (storageCache) {
+        // console.log('[ScheduleService] ✅ Using storage cache for schedule');
+        // Lưu vào memory cache để lần sau nhanh hơn
+        this.scheduleCache.set(cacheKey, storageCache);
+        return storageCache.data;
+      }
+
+      // Không có cache, gọi API
+      // console.log('[ScheduleService] 🌐 Fetching schedule from API');
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+      
+      const requestBody = {
+        strChucNang_Id: "B46109CD333D4E3DAC50D43E8607ED46",
+        strNgayBatDau: startDate, // Format: "23/03/2026"
+        strNgayKetThuc: endDate,  // Format: "29/03/2026"
+        strNguoiThucHien_Id: userId,
+        strQLSV_NguoiHoc_Id: userId,
+        iM: 'ChaoLong'
+      };
+      
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/DSA4BRINKCIpAiAPKSAv`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          A: AE(JSON.stringify(requestBody), 'DSA4BRINKCIpAiAPKSAv')
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const temp = await response.json();
+      
+      if (!temp.Success) {
+        throw new Error(temp.Message || 'Lỗi khi lấy lịch học');
+      }
+
+      // Giải mã dữ liệu từ response
+      const dataLichHoc = AD(temp.Data.B, requestBody.iM);
+      
+      if (!dataLichHoc) { 
+        throw new Error('Không thể giải mã dữ liệu lịch học');
+      }
+
+      // console.log('[ScheduleService] 📦 Decrypted data:', dataLichHoc);
+      const scheduleData = JSON.parse(dataLichHoc);
+      // console.log('[ScheduleService] 📅 Parsed schedule data:', scheduleData);
+      // Lưu vào cache
+      const cachedData: CachedData<ScheduleItem[]> = {
+        data: scheduleData,
+        timestamp: Date.now(),
+      };
+      this.scheduleCache.set(cacheKey, cachedData);
+      await this.saveCacheToStorage(cacheKey, scheduleData);
+
+      return scheduleData;
+    } catch (error) {
+      console.error('[ScheduleService] ❌ Error fetching personal schedule:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lấy thông tin chương trình học của sinh viên
+   */
+  async getStudentInfo(): Promise<StudentInfo | null> {
+    try {
+      // Kiểm tra memory cache
+      if (this.studentInfoCache && this.isCacheValid(this.studentInfoCache)) {
+        // console.log('[ScheduleService] ✅ Using memory cache for student info');
+        return this.studentInfoCache.data;
+      }
+
+      // Kiểm tra storage cache
+      const storageCache = await this.getCacheFromStorage<StudentInfo>(CACHE_KEYS.STUDENT_INFO);
+      if (storageCache) {
+        // console.log('[ScheduleService] ✅ Using storage cache for student info');
+        this.studentInfoCache = storageCache;
+        return storageCache.data;
+      }
+
+      // Ưu tiên POST encrypted (hoạt động trên cả CMCU & EAUT)
+      let studentData = await this.fetchStudentInfoEncrypted();
+
+      // Fallback 1: GET cũ (chỉ CMCU có)
+      if (!studentData) {
+        const token = await this.getAuthToken();
+        const response = await fetch(`${BASE_URL}/LayThongTinChuongTrinhHoc`, {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (response.ok) {
+          const result: ApiResponse<StudentInfo> = await response.json();
+          if (result.Success) {
+            studentData = result.Data?.[0] || null;
+          }
+        }
+      }
+
+      // Fallback 2: profileService (chỉ có info hồ sơ, không có chuongTrinh ID)
+      if (!studentData) {
+        studentData = await this.fetchStudentInfoFromProfile();
+      }
+
+      if (studentData) {
+        this.studentInfoCache = {
+          data: studentData,
+          timestamp: Date.now(),
+        };
+        await this.saveCacheToStorage(CACHE_KEYS.STUDENT_INFO, studentData);
+      }
+
+      return studentData;
+    } catch (error) {
+      console.warn('[ScheduleService] ⚠️ Could not fetch student info:', error);
+      return null;
+    }
+  }
+
+  private async fetchStudentInfoEncrypted(): Promise<StudentInfo | null> {
+    try {
+      const token = await this.getAuthToken();
+      const userId = await this.getUserId();
+
+      const encryptionKey = 'DSA4FSkuLyYVKC8CKTQuLyYVMygvKQkuIgPP';
+      const requestBody = {
+        func: 'pkg_congthongtin_hssv_thongtin.LayThongTinChuongTrinhHoc',
+        iM: 'AzzSystem',
+        strChucNang_Id: 'B46109CD333D4E3DAC50D43E8607ED46',
+        strQLSV_NguoiHoc_Id: userId,
+        strNguoiThucHien_Id: userId,
+      };
+
+      const response = await fetch(`${API_HOSTS.sinhVien}/SV_ThongTin_MH/${encryptionKey}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          A: AE(JSON.stringify(requestBody), encryptionKey),
+        }),
+      });
+
+      if (!response.ok) return null;
+
+      const temp = await response.json();
+      if (!temp.Success || !temp.Data?.B) return null;
+
+      const decryptedData = AD(temp.Data.B, requestBody.iM);
+      if (!decryptedData) return null;
+
+      const apiData = JSON.parse(decryptedData);
+      const list = Array.isArray(apiData) ? apiData : apiData.Data || [];
+      return list[0] || null;
+    } catch (error) {
+      console.warn('[ScheduleService] ⚠️ Encrypted student info failed:', error);
+      return null;
+    }
+  }
+
+  private async fetchStudentInfoFromProfile(): Promise<StudentInfo | null> {
+    try {
+      const profileService = (await import('./profileService')).default;
+      const profile = await profileService.getProfileInfo();
+      if (!profile) return null;
+
+      return {
+        QLSV_TRANGTHAINGUOIHOC_ID: '',
+        QLSV_TRANGTHAINGUOIHOC_TEN: profile.QLSV_NGUOIHOC_TRANGTHAI || '',
+        QLSV_TRANGTHAINGUOIHOC_MA: '',
+        TTLL_KHICANBAOTINCHOAI_ODAU: '',
+        QLSV_NGUOIHOC_ID: profile.ID,
+        QLSV_NGUOIHOC_NGAYSINH: profile.QLSV_NGUOIHOC_NGAYSINH || '',
+        QLSV_NGUOIHOC_MASO: profile.MASO,
+        QLSV_NGUOIHOC_HODEM: profile.HODEM,
+        QLSV_NGUOIHOC_TEN: profile.TEN,
+        QLSV_NGUOIHOC_GIOITINH: profile.GIOITINH_TEN || '',
+        DAOTAO_TOCHUCCHUONGTRINH_ID: '',
+        DAOTAO_CHUONGTRINH_TEN: profile.NGANH || '',
+        DAOTAO_CHUONGTRINH_MA: profile.MANGANH || '',
+        DAOTAO_LOPQUANLY_ID: '',
+        DAOTAO_LOPQUANLY_TEN: profile.LOP || '',
+        DAOTAO_LOPQUANLY_MA: profile.LOP || '',
+        DAOTAO_KHOADAOTAO_ID: '',
+        DAOTAO_KHOADAOTAO_TEN: profile.KHOADAOTAO || '',
+        DAOTAO_KHOADAOTAO_MA: '',
+        DAOTAO_KHOAQUANLY_ID: '',
+        DAOTAO_KHOAQUANLY_TEN: profile.KHOAQUANLY || '',
+        DAOTAO_KHOAQUANLY_MA: '',
+        DAOTAO_HEDAOTAO_ID: '',
+        DAOTAO_HEDAOTAO_TEN: profile.HEDAOTAO || '',
+        DAOTAO_HEDAOTAO_MA: '',
+      };
+    } catch (error) {
+      console.warn('[ScheduleService] ⚠️ Profile fallback also failed:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Lấy lịch học theo tuần (7 ngày từ ngày bắt đầu)
+   */
+  async getWeeklySchedule(startDate: Date): Promise<ScheduleItem[]> {
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + 6);
+    
+    const formatDate = (date: Date): string => {
+      const day = date.getDate().toString().padStart(2, '0');
+      const month = (date.getMonth() + 1).toString().padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    };
+
+    return this.getPersonalSchedule(
+      formatDate(startDate),
+      formatDate(endDate)
+    );
+  }
+
+  /**
+   * Lấy lịch học hôm nay
+   */
+  async getTodaySchedule(): Promise<ScheduleItem[]> {
+    const today = new Date();
+    return this.getWeeklySchedule(today);
+  }
+
+  /**
+   * Phân loại lịch theo loại (học/thi)
+   */
+  separateScheduleByType(schedules: ScheduleItem[]): {
+    classes: ScheduleItem[];
+    exams: ScheduleItem[];
+  } {
+    return {
+      classes: schedules.filter(item => item.PHANLOAI === 'LICHHOC'),
+      exams: schedules.filter(item => item.PHANLOAI === 'LICHTHI'),
+    };
+  }
+
+  /**
+   * Nhóm lịch theo ngày
+   */
+  groupScheduleByDate(schedules: ScheduleItem[]): Record<string, ScheduleItem[]> {
+    return schedules.reduce((groups, schedule) => {
+      const date = schedule.NGAYHOC;
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(schedule);
+      return groups;
+    }, {} as Record<string, ScheduleItem[]>);
+  }
+
+  /**
+   * Format thời gian hiển thị
+   */
+  formatTime(hour: number, minute: number): string {
+    const h = Math.floor(hour).toString().padStart(2, '0');
+    const m = Math.floor(minute).toString().padStart(2, '0');
+    return `${h}:${m}`;
+  }
+
+  /**
+   * Format thời gian buổi học
+   */
+  formatScheduleTime(schedule: ScheduleItem): string {
+    const startTime = this.formatTime(schedule.GIOBATDAU, schedule.PHUTBATDAU);
+    const endTime = this.formatTime(schedule.GIOKETTHUC, schedule.PHUTKETTHUC);
+    return `${startTime} - ${endTime}`;
+  }
+
+  /**
+   * Phân loại trạng thái chuyên cần
+   */
+  getAttendanceStatus(thongTinChuyenCan: string | null): {
+    type: 'present' | 'absent' | 'late' | 'excused' | 'unknown';
+    label: string;
+    color: string;
+    icon: string;
+  } {
+    if (!thongTinChuyenCan) {
+      return {
+        type: 'unknown',
+        label: 'Chưa điểm danh',
+        color: '#9CA3AF',
+        icon: 'help-outline',
+      };
+    }
+
+    const text = thongTinChuyenCan.toLowerCase();
+
+    // Có mặt
+    if (text.includes('có mặt') || text.includes('present')) {
+      return {
+        type: 'present',
+        label: thongTinChuyenCan,
+        color: '#10B981', // Green
+        icon: 'check-circle',
+      };
+    }
+
+    // Vắng mặt có phép
+    if (text.includes('vắng') && (text.includes('có phép') || text.includes('phép'))) {
+      return {
+        type: 'excused',
+        label: thongTinChuyenCan,
+        color: '#F59E0B', // Orange
+        icon: 'event-busy',
+      };
+    }
+
+    // Vắng mặt (không phép)
+    if (text.includes('vắng') || text.includes('absent')) {
+      return {
+        type: 'absent',
+        label: thongTinChuyenCan,
+        color: '#EF4444', // Red
+        icon: 'cancel',
+      };
+    }
+
+    // Đi muộn
+    if (text.includes('muộn') || text.includes('late')) {
+      return {
+        type: 'late',
+        label: thongTinChuyenCan,
+        color: '#F59E0B', // Orange
+        icon: 'schedule',
+      };
+    }
+
+    // Trường hợp khác
+    return {
+      type: 'unknown',
+      label: thongTinChuyenCan,
+      color: '#6B7280',
+      icon: 'info',
+    };
+  }
+
+  /**
+   * Xóa cache (dùng khi cần refresh dữ liệu hoặc khi logout)
+   */
+  async clearCache(): Promise<void> {
+    try {
+      // console.log('[ScheduleService] 🗑️ Bắt đầu xóa cache...');
+      
+      // Xóa memory cache
+      this.scheduleCache.clear();
+      this.studentInfoCache = null;
+
+      // Xóa storage cache
+      const keys = await AsyncStorage.getAllKeys();
+      const cacheKeys = keys.filter(key => 
+        key.startsWith(CACHE_KEYS.SCHEDULE) || 
+        key === CACHE_KEYS.STUDENT_INFO
+      );
+      
+      // console.log('[ScheduleService] 📝 Số cache keys tìm thấy:', cacheKeys.length);
+      
+      if (cacheKeys.length > 0) {
+        await AsyncStorage.multiRemove(cacheKeys);
+        // console.log('[ScheduleService] ✅ Đã xóa cache keys:', cacheKeys);
+      }
+      
+      // console.log('[ScheduleService] ✅ Cache cleared hoàn tất');
+    } catch (error) {
+      // console.warn('[ScheduleService] ⚠️ Failed to clear cache:', error);
+    }
+  }
+
+  /**
+   * Preload dữ liệu cho tuần hiện tại và tuần sau
+   */
+  async preloadScheduleData(): Promise<void> {
+    try {
+      const today = new Date();
+      const currentWeekStart = new Date(today);
+      const dayOfWeek = today.getDay();
+      const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      currentWeekStart.setDate(today.getDate() + mondayOffset);
+
+      const nextWeekStart = new Date(currentWeekStart);
+      nextWeekStart.setDate(currentWeekStart.getDate() + 7);
+
+      // Preload tuần hiện tại và tuần sau
+      const promises = [
+        this.getWeeklySchedule(currentWeekStart),
+        this.getWeeklySchedule(nextWeekStart),
+        this.getStudentInfo(),
+      ];
+
+      await Promise.allSettled(promises);
+      // console.log('[ScheduleService] 🚀 Preload completed');
+    } catch (error) {
+      console.warn('[ScheduleService] ⚠️ Preload failed:', error);
+    }
+  }
+}
+
+export const scheduleService = new ScheduleService();

@@ -8,7 +8,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Modal, StyleSheet, ActivityIndicator, Text, TouchableOpacity, Alert } from 'react-native';
 import { WebView } from 'react-native-webview';
-import { microsoftSSOService, MicrosoftUserInfo } from '../services/microsoftSSOService';
+import { microsoftSSOService, MicrosoftUserInfo } from '../services/chung/microsoftSSOService';
 import { validateMicrosoftConfig } from '../config/microsoftSSOConfig';
 
 interface MicrosoftSSOWebViewProps {

@@ -8,7 +8,7 @@ import {
 } from 'react-native';
 import { Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { gradeService, DiemRenLuyenResponse, DiemRenLuyen } from '../../services/gradeService';
+import { gradeService, DiemRenLuyenResponse, DiemRenLuyen } from '../../services/sinhVien/gradeService';
 
 type SectionType = 'ky' | 'nam' | 'toankhoa';
 

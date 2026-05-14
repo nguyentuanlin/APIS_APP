@@ -1,7 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { gradeService, GradeResponse } from '../../services/gradeService';
+import { gradeService, GradeResponse } from '../../services/sinhVien/gradeService';
 
 interface FailedCoursesProps {
   gradeData: GradeResponse | null;

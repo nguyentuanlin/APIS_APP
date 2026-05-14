@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import menuService, { DashboardItem } from '../services/menuService';
+import menuService, { DashboardItem } from '../services/chung/menuService';
 
 interface DashboardShortcutsProps {
   navigation: any;

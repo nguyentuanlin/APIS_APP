@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, ActivityIndicator, Alert } from 'react-native';
-import { microsoftNativeService, MicrosoftUser } from '../services/microsoftNativeService';
+import { microsoftNativeService, MicrosoftUser } from '../services/chung/microsoftNativeService';
 import { validateNativeConfig } from '../config/microsoftNativeConfig';
 
 interface MicrosoftNativeLoginProps {

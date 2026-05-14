@@ -16,7 +16,7 @@ import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
-import { scheduleService, StudentInfo } from '../services/scheduleService';
+import { scheduleService, StudentInfo } from '../services/sinhVien/scheduleService';
 
 interface CustomDrawerProps {
   visible: boolean;
@@ -65,7 +65,7 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
           setMenuItems([]);
           return;
         }
-        const { lecturerService } = await import('../services/lecturerService');
+        const { lecturerService } = await import('../services/giangVien/lecturerService');
         const allMenus = await lecturerService.getMenuByRole(user.activeRoleId);
         const parentMenus = lecturerService.getParentMenus(allMenus);
         const menuStructure = parentMenus.map((parent) => {
@@ -76,7 +76,7 @@ const CustomDrawer: React.FC<CustomDrawerProps> = ({ visible, onClose, navigatio
         return;
       }
 
-      const menuService = (await import('../services/menuService')).default;
+      const menuService = (await import('../services/chung/menuService')).default;
       const allMenus = await menuService.getMenuByUser();
       const parentMenus = menuService.getParentMenus(allMenus);
       const menuStructure = parentMenus.map((parent) => {

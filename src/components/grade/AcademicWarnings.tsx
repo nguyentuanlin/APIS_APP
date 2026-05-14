@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { gradeService, CanhBaoHocVu } from '../../services/gradeService';
+import { gradeService, CanhBaoHocVu } from '../../services/sinhVien/gradeService';
 
 const AcademicWarnings = () => {
   const [loading, setLoading] = useState(true);

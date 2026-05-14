@@ -11,7 +11,7 @@ import {
   StatusBar,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { fcmService, FcmNotiItem } from '../services/fcmService';
+import { fcmService, FcmNotiItem } from '../services/chung/fcmService';
 
 interface Props {
   visible: boolean;

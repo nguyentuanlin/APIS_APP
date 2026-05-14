@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { gradeService, GradeResponse, SemesterGrade, GradeItem } from '../../services/gradeService';
+import { gradeService, GradeResponse, SemesterGrade, GradeItem } from '../../services/sinhVien/gradeService';
 
 interface GradeTableProps {
   gradeData: GradeResponse | null;

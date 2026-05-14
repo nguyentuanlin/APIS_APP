@@ -19,7 +19,7 @@ import {
   LichGiangItem,
   KieuChuyenCanItem,
   SinhVienLichItem,
-} from '../services/lecturerScheduleService';
+} from '../services/giangVien/lecturerScheduleService';
 
 interface Props {
   visible: boolean;

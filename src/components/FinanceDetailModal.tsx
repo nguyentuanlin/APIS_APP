@@ -9,7 +9,7 @@ import {
   Dimensions,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { FinanceItem, financeService } from '../services/financeService';
+import { FinanceItem, financeService } from '../services/sinhVien/financeService';
 
 interface FinanceDetailModalProps {
   visible: boolean;

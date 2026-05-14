@@ -7,7 +7,7 @@ import {
 } from 'react-native';
 import { Text } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
-import { gradeService, VanBangChungChi } from '../../services/gradeService';
+import { gradeService, VanBangChungChi } from '../../services/sinhVien/gradeService';
 
 const CertificatesList = () => {
   const [loading, setLoading] = useState(true);
