@@ -1,0 +1,9 @@
+# Force LF line endings for shell/build scripts to avoid macOS build errors
+# (Windows editors có thể tự đổi LF → CRLF, làm bash trên iOS build cloud lỗi)
+*.sh         text eol=lf
+*.rb         text eol=lf
+.xcode.env   text eol=lf
+Podfile      text eol=lf
+Gemfile      text eol=lf
+.bash*       text eol=lf
+.zsh*        text eol=lf

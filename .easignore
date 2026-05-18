@@ -7,10 +7,6 @@ npm-debug.*
 *.p12
 *.key
 *.mobileprovision
-
-# Firebase config (chứa API key — không commit)
-GoogleService-Info.plist
-google-services.json
 *.orig.*
 web-build/
 
@@ -22,3 +18,7 @@ web-build/
 
 # Environment variables
 .env
+
+# NOTE: KHÔNG ignore GoogleService-Info.plist / google-services.json
+# Hai file này được .gitignore (để không commit lên Git),
+# nhưng EAS Build cần upload lên cloud builder để build app.

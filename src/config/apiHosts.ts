@@ -1,6 +1,6 @@
 import { Platform } from 'react-native';
 
-const DEFAULT_HOST = 'https://iu.cmcu.edu.vn';
+const DEFAULT_HOST = 'https://qldt.eaut.edu.vn';
 
 const stripTrailingSlash = (s: string) => s.replace(/\/+$/, '');
 

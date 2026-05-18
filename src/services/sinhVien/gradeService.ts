@@ -490,69 +490,48 @@ class GradeService {
         });
       });
 
-      // Gán điểm trung bình cho từng học kỳ
-      semesterMap.forEach((semester, key) => {
-        // NAMHOC đã có format "2025_2026", HOCKY là số
+      // Filter điểm theo học kỳ - khớp logic web diemhoc.js:326+
+      // Điều kiện chung cho per-semester:
+      //   DAOTAO_THOIGIANDAOTAO_ID !== null (record của 1 kỳ cụ thể)
+      //   THUOCTINHLANTINH === 0
+      //   DOTHOC === null
+      //   PHAMVITONGHOPDIEM_TEN === 'HOCKY' (cả TRUNGBINHCHUNG lẫn TRUNGBINHTICHLUY đều dùng HOCKY)
+      const findSemesterAvg = (
+        namHoc: string,
+        hocKy: number,
+        loai: 'TRUNGBINHCHUNG' | 'TRUNGBINHTICHLUY',
+        thangDiem: '10' | '4'
+      ) => avgData.find(
+        (item: any) =>
+          item.DAOTAO_THOIGIANDAOTAO_ID !== null &&
+          item.THUOCTINHLANTINH === 0 &&
+          item.DOTHOC === null &&
+          item.PHAMVITONGHOPDIEM_TEN === 'HOCKY' &&
+          item.LOAIDIEMTRUNGBINH_MA === loai &&
+          item.THANGDIEM_MA === thangDiem &&
+          item.NAMHOC === namHoc &&
+          item.DAOTAO_THOIGIANDAOTAO_KY == hocKy
+      );
+
+      semesterMap.forEach((semester) => {
         const namHoc = semester.NAMHOC;
         const hocKy = semester.HOCKY;
-        
-        // Tìm điểm trung bình chung của học kỳ này (hệ 10) - PHAMVI = HOCKY
-        const avgHK_10 = avgData.find(
-          (item: any) => 
-            item.DAOTAO_THOIGIANDAOTAO_NAMHOC === namHoc && 
-            item.DAOTAO_THOIGIANDAOTAO_KY === hocKy &&
-            item.PHAMVITONGHOPDIEM_TEN === 'HOCKY' &&
-            item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
-            item.THANGDIEM_MA === '10'
-        );
 
-        // Tìm điểm trung bình chung của học kỳ này (hệ 4) - PHAMVI = HOCKY
-        const avgHK_4 = avgData.find(
-          (item: any) => 
-            item.DAOTAO_THOIGIANDAOTAO_NAMHOC === namHoc && 
-            item.DAOTAO_THOIGIANDAOTAO_KY === hocKy &&
-            item.PHAMVITONGHOPDIEM_TEN === 'HOCKY' &&
-            item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
-            item.THANGDIEM_MA === '4'
-        );
+        const tbcHK_10 = findSemesterAvg(namHoc, hocKy, 'TRUNGBINHCHUNG', '10');
+        const tbcHK_4 = findSemesterAvg(namHoc, hocKy, 'TRUNGBINHCHUNG', '4');
+        const tlHK_10 = findSemesterAvg(namHoc, hocKy, 'TRUNGBINHTICHLUY', '10');
+        const tlHK_4 = findSemesterAvg(namHoc, hocKy, 'TRUNGBINHTICHLUY', '4');
 
-        // Tìm điểm tích lũy tại học kỳ này (hệ 10) - PHAMVI = NHIEUKY
-        const tichLuyHK_10 = avgData.find(
-          (item: any) => 
-            item.DAOTAO_THOIGIANDAOTAO_NAMHOC === namHoc && 
-            item.DAOTAO_THOIGIANDAOTAO_KY === hocKy &&
-            item.PHAMVITONGHOPDIEM_TEN === 'NHIEUKY' &&
-            item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHTICHLUY' &&
-            item.THANGDIEM_MA === '10'
-        );
-
-        // Tìm điểm tích lũy tại học kỳ này (hệ 4) - PHAMVI = NHIEUKY
-        const tichLuyHK_4 = avgData.find(
-          (item: any) => 
-            item.DAOTAO_THOIGIANDAOTAO_NAMHOC === namHoc && 
-            item.DAOTAO_THOIGIANDAOTAO_KY === hocKy &&
-            item.PHAMVITONGHOPDIEM_TEN === 'NHIEUKY' &&
-            item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHTICHLUY' &&
-            item.THANGDIEM_MA === '4'
-        );
-
-        // Gán giá trị - chỉ hiển thị điểm của học kỳ đó (không hiển thị tích lũy)
-        // Tổng tín chỉ của học kỳ này (từ HOCKY)
-        const tongTinChi = avgHK_10?.TONGSOTINCHI || avgHK_4?.TONGSOTINCHI || 0;
-        semester.TONGSO_TINCHI = tongTinChi;
-        
-        // Tổng số tín chỉ tích lũy = tổng tín chỉ của học kỳ này (cùng giá trị)
-        semester.SOTINCHI_TICHLUY = tongTinChi;
-        
-        // Điểm trung bình của học kỳ này (từ HOCKY)
-        const diemTB_10 = avgHK_10?.DIEMTRUNGBINH || 0;
-        const diemTB_4 = avgHK_4?.DIEMTRUNGBINH || 0;
-        semester.DIEMTRUNGBINH_HE10 = diemTB_10;
-        semester.DIEMTRUNGBINH_HE4 = diemTB_4;
-        
-        // Điểm trung bình tích lũy = điểm trung bình của học kỳ này (cùng giá trị)
-        semester.DIEMTRUNGBINH_TICHLUY_HE10 = diemTB_10;
-        semester.DIEMTRUNGBINH_TICHLUY_HE4 = diemTB_4;
+        // Tổng tín chỉ của học kỳ (lấy từ TRUNGBINHCHUNG hệ 10)
+        semester.TONGSO_TINCHI = tbcHK_10?.TONGSOTINCHI || 0;
+        // Tổng số tín chỉ tích lũy đến hết kỳ (lấy từ TRUNGBINHTICHLUY hệ 10)
+        semester.SOTINCHI_TICHLUY = tlHK_10?.TONGSOTINCHI || 0;
+        // Điểm TB chung của kỳ
+        semester.DIEMTRUNGBINH_HE10 = tbcHK_10?.DIEMTRUNGBINH || 0;
+        semester.DIEMTRUNGBINH_HE4 = tbcHK_4?.DIEMTRUNGBINH || 0;
+        // Điểm TB tích lũy đến hết kỳ
+        semester.DIEMTRUNGBINH_TICHLUY_HE10 = tlHK_10?.DIEMTRUNGBINH || 0;
+        semester.DIEMTRUNGBINH_TICHLUY_HE4 = tlHK_4?.DIEMTRUNGBINH || 0;
       });
 
       // Sắp xếp theo năm học và học kỳ (mới nhất trước)
@@ -563,31 +542,23 @@ class GradeService {
         return b.HOCKY - a.HOCKY;
       });
 
-      // Tìm điểm trung bình chung (toàn khóa)
-      const toanKhoa_10 = avgData.find(
-        (item: any) => item.PHAMVITONGHOPDIEM_TEN === 'TOANKHOA' && 
-                       item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
-                       item.THANGDIEM_MA === '10'
+      // Filter điểm toàn khóa - khớp logic web diemhoc.js:235-253
+      // Record toàn khóa = DAOTAO_THOIGIANDAOTAO_ID === null (không thuộc kỳ cụ thể)
+      const findToanKhoa = (
+        loai: 'TRUNGBINHCHUNG' | 'TRUNGBINHTICHLUY',
+        thangDiem: '10' | '4'
+      ) => avgData.find(
+        (item: any) =>
+          item.DAOTAO_THOIGIANDAOTAO_ID === null &&
+          item.THUOCTINHLANTINH === 0 &&
+          item.LOAIDIEMTRUNGBINH_MA === loai &&
+          item.THANGDIEM_MA === thangDiem
       );
 
-      const toanKhoa_4 = avgData.find(
-        (item: any) => item.PHAMVITONGHOPDIEM_TEN === 'TOANKHOA' && 
-                       item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHCHUNG' &&
-                       item.THANGDIEM_MA === '4'
-      );
-
-      // Tìm điểm trung bình tích lũy
-      const tichLuy_10 = avgData.find(
-        (item: any) => item.PHAMVITONGHOPDIEM_TEN === 'TOANKHOA' && 
-                       item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHTICHLUY' &&
-                       item.THANGDIEM_MA === '10'
-      );
-
-      const tichLuy_4 = avgData.find(
-        (item: any) => item.PHAMVITONGHOPDIEM_TEN === 'TOANKHOA' && 
-                       item.LOAIDIEMTRUNGBINH_MA === 'TRUNGBINHTICHLUY' &&
-                       item.THANGDIEM_MA === '4'
-      );
+      const toanKhoa_10 = findToanKhoa('TRUNGBINHCHUNG', '10');
+      const toanKhoa_4 = findToanKhoa('TRUNGBINHCHUNG', '4');
+      const tichLuy_10 = findToanKhoa('TRUNGBINHTICHLUY', '10');
+      const tichLuy_4 = findToanKhoa('TRUNGBINHTICHLUY', '4');
 
       // console.log('[GradeService] Stats from API:', {
       //   mainStats: toanKhoa_4 ? {
@@ -633,8 +604,10 @@ class GradeService {
       return {
         DANHSACH_HOCKY: sortedSemesters,
         THONGKE: {
-          TONGSO_TINCHI: toanKhoa_4?.TONGSOTINCHI || 0,
-          SOTINCHI_TICHLUY: tichLuy_4?.SOTCDAT || 0,
+          // Tổng tín chỉ đã đăng ký toàn khóa (web: lblTongTinChi ← TRUNGBINHCHUNG hệ 10 .TONGSOTINCHI)
+          TONGSO_TINCHI: toanKhoa_10?.TONGSOTINCHI || 0,
+          // Tổng tín chỉ tích lũy toàn khóa (web: lblTichLuy ← TRUNGBINHTICHLUY hệ 10 .TONGSOTINCHI)
+          SOTINCHI_TICHLUY: tichLuy_10?.TONGSOTINCHI || 0,
           DIEMTRUNGBINH_HE10: toanKhoa_10?.DIEMTRUNGBINH || 0,
           DIEMTRUNGBINH_HE4: toanKhoa_4?.DIEMTRUNGBINH || 0,
           DIEMTRUNGBINH_TICHLUY_HE10: tichLuy_10?.DIEMTRUNGBINH || 0,

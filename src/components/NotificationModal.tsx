@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,6 +9,8 @@ import {
   Pressable,
   Platform,
   StatusBar,
+  RefreshControl,
+  Alert,
 } from 'react-native';
 import { MaterialIcons } from '@expo/vector-icons';
 import { fcmService, FcmNotiItem } from '../services/chung/fcmService';
@@ -16,6 +18,7 @@ import { fcmService, FcmNotiItem } from '../services/chung/fcmService';
 interface Props {
   visible: boolean;
   onClose: () => void;
+  onItemPress?: (item: FcmNotiItem) => void;
 }
 
 function formatRelative(ts: number): string {
@@ -36,8 +39,9 @@ function formatRelative(ts: number): string {
 
 const TOP_OFFSET = Platform.OS === 'ios' ? 100 : (StatusBar.currentHeight || 24) + 56;
 
-const NotificationModal: React.FC<Props> = ({ visible, onClose }) => {
+const NotificationModal: React.FC<Props> = ({ visible, onClose, onItemPress }) => {
   const [items, setItems] = useState<FcmNotiItem[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const unsub = fcmService.subscribe(inbox => {
@@ -48,17 +52,69 @@ const NotificationModal: React.FC<Props> = ({ visible, onClose }) => {
 
   useEffect(() => {
     if (visible) {
-      fcmService.markAllRead().catch(() => {});
+      // Khi mở modal: refresh từ server để chắc chắn có data mới nhất
+      fcmService.refresh().catch(() => {});
     }
   }, [visible]);
 
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await fcmService.refresh();
+    } finally {
+      setRefreshing(false);
+    }
+  }, []);
+
+  const handleItemPress = useCallback(
+    (item: FcmNotiItem) => {
+      if (!item.read) {
+        fcmService.markRead(item.id).catch(() => {});
+      }
+      if (onItemPress) {
+        onClose();
+        onItemPress(item);
+      }
+    },
+    [onItemPress, onClose],
+  );
+
+  const handleItemLongPress = useCallback((item: FcmNotiItem) => {
+    Alert.alert('Xóa thông báo', 'Bạn có chắc muốn xóa thông báo này?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Xóa',
+        style: 'destructive',
+        onPress: () => fcmService.deleteItem(item.id).catch(() => {}),
+      },
+    ]);
+  }, []);
+
+  const handleClearAll = useCallback(() => {
+    Alert.alert('Xóa tất cả', 'Xóa toàn bộ thông báo?', [
+      { text: 'Hủy', style: 'cancel' },
+      {
+        text: 'Xóa',
+        style: 'destructive',
+        onPress: () => fcmService.clearInbox().catch(() => {}),
+      },
+    ]);
+  }, []);
+
   const renderItem = ({ item }: { item: FcmNotiItem }) => (
-    <View style={styles.item}>
-      <View style={styles.iconBox}>
-        <MaterialIcons name="notifications" size={18} color="#3B82F6" />
+    <TouchableOpacity
+      style={[styles.item, !item.read && styles.itemUnread]}
+      onPress={() => handleItemPress(item)}
+      onLongPress={() => handleItemLongPress(item)}
+      delayLongPress={400}
+      activeOpacity={0.6}
+    >
+      <View style={[styles.iconBox, !item.read && styles.iconBoxUnread]}>
+        <MaterialIcons name="notifications" size={18} color={item.read ? '#9CA3AF' : '#3B82F6'} />
+        {!item.read && <View style={styles.dot} />}
       </View>
       <View style={styles.content}>
-        <Text style={styles.title} numberOfLines={2}>
+        <Text style={[styles.title, !item.read && styles.titleUnread]} numberOfLines={2}>
           {item.title}
         </Text>
         {!!item.body && (
@@ -71,7 +127,7 @@ const NotificationModal: React.FC<Props> = ({ visible, onClose }) => {
           <Text style={styles.time}>{formatRelative(item.receivedAt)}</Text>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   return (
@@ -123,18 +179,33 @@ const NotificationModal: React.FC<Props> = ({ visible, onClose }) => {
                 style={styles.list}
                 contentContainerStyle={styles.listContent}
                 ItemSeparatorComponent={() => <View style={styles.separator} />}
+                refreshControl={
+                  <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    tintColor="#3B82F6"
+                    colors={['#3B82F6']}
+                  />
+                }
               />
             )}
 
             {items.length > 0 && (
-              <TouchableOpacity
-                style={styles.clearBtn}
-                onPress={() => fcmService.clearInbox()}
-                activeOpacity={0.7}
-              >
-                <MaterialIcons name="delete-outline" size={16} color="#EF4444" />
-                <Text style={styles.clearText}>Xóa tất cả</Text>
-              </TouchableOpacity>
+              <View style={styles.footerRow}>
+                <TouchableOpacity
+                  style={styles.footerBtn}
+                  onPress={() => fcmService.markAllRead()}
+                  activeOpacity={0.7}
+                >
+                  <MaterialIcons name="done-all" size={16} color="#3B82F6" />
+                  <Text style={[styles.footerText, { color: '#3B82F6' }]}>Đánh dấu đã đọc</Text>
+                </TouchableOpacity>
+                <View style={styles.footerDivider} />
+                <TouchableOpacity style={styles.footerBtn} onPress={handleClearAll} activeOpacity={0.7}>
+                  <MaterialIcons name="delete-outline" size={16} color="#EF4444" />
+                  <Text style={[styles.footerText, { color: '#EF4444' }]}>Xóa tất cả</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </Pressable>
         </View>
@@ -223,24 +294,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingVertical: 11,
     paddingHorizontal: 10,
+    borderRadius: 8,
+  },
+  itemUnread: {
+    backgroundColor: '#F0F7FF',
   },
   iconBox: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#EFF6FF',
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
+    position: 'relative',
+  },
+  iconBoxUnread: {
+    backgroundColor: '#EFF6FF',
+  },
+  dot: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   content: {
     flex: 1,
   },
   title: {
     fontSize: 13.5,
-    fontWeight: '600',
-    color: '#1F2937',
+    fontWeight: '500',
+    color: '#4B5563',
     marginBottom: 2,
+  },
+  titleUnread: {
+    fontWeight: '700',
+    color: '#1F2937',
   },
   body: {
     fontSize: 12.5,
@@ -285,17 +379,26 @@ const styles = StyleSheet.create({
     color: '#9CA3AF',
     marginTop: 4,
   },
-  clearBtn: {
+  footerRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 11,
+    alignItems: 'stretch',
     borderTopWidth: 1,
     borderTopColor: '#F3F4F6',
     backgroundColor: '#FAFAFA',
   },
-  clearText: {
-    color: '#EF4444',
+  footerBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 11,
+  },
+  footerDivider: {
+    width: 1,
+    backgroundColor: '#E5E7EB',
+    marginVertical: 8,
+  },
+  footerText: {
     fontSize: 12.5,
     fontWeight: '600',
     marginLeft: 6,

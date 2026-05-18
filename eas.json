@@ -18,7 +18,7 @@
         "EXPO_USE_HERMES": "false",
         "EXPO_NEW_ARCH_ENABLED": "0",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "959977802935-s6s9t1bqegtnj0qomb94620pqs3fl4sh.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/google"
+        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://qldt.eaut.edu.vn/congthongtin/login.aspx"
       }
     },
     "preview": {
@@ -30,8 +30,8 @@
       "env": {
         "EXPO_NEW_ARCH_ENABLED": "0",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "959977802935-s6s9t1bqegtnj0qomb94620pqs3fl4sh.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/google",
-        "EXPO_PUBLIC_API_HOST": "https://iu.cmcu.edu.vn"
+        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://qldt.eaut.edu.vn/congthongtin/login.aspx",
+        "EXPO_PUBLIC_API_HOST": "https://qldt.eaut.edu.vn"
       }
     },
     "release-apk": {
@@ -42,7 +42,7 @@
       "env": {
         "EXPO_NEW_ARCH_ENABLED": "0",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "959977802935-s6s9t1bqegtnj0qomb94620pqs3fl4sh.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/google"
+        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://qldt.eaut.edu.vn/congthongtin/login.aspx"
       }
     },
     "production": {
@@ -52,8 +52,8 @@
       "env": {
         "EXPO_NEW_ARCH_ENABLED": "0",
         "EXPO_PUBLIC_GOOGLE_CLIENT_ID": "959977802935-s6s9t1bqegtnj0qomb94620pqs3fl4sh.apps.googleusercontent.com",
-        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/google",
-        "EXPO_PUBLIC_API_HOST": "https://iu.cmcu.edu.vn"
+        "EXPO_PUBLIC_GOOGLE_REDIRECT_URI": "https://qldt.eaut.edu.vn/congthongtin/login.aspx",
+        "EXPO_PUBLIC_API_HOST": "https://qldt.eaut.edu.vn"
       }
     }
   },

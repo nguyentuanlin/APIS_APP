@@ -57,7 +57,7 @@
       },
       "EXPO_PUBLIC_AZURE_AD_TENANT_ID": "f8cdef31-a31e-4b4a-93e4-5f571e91255a",
       "EXPO_PUBLIC_AZURE_AD_CLIENT_ID": "aa70c3d3-8d84-4f24-8a4c-eecd75dff0b8",
-      "EXPO_PUBLIC_AZURE_AD_REDIRECT_URI": "https://cagent.cmcu.edu.vn/api/auth/mobile/azure-ad"
+      "EXPO_PUBLIC_AZURE_AD_REDIRECT_URI": "https://qldt.eaut.edu.vn/congthongtin/login.aspx"
     }
   }
 }
